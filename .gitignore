@@ -1,0 +1,51 @@
+# Manim LLM Generator - Git Ignore
+
+# Output directories
+output/
+media/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Manim cache and temporary files
+*.mp4
+*.mov
+*.avi
+*.tex
+*.svg
+*.png
+*.jpg
+*.jpeg
+
+# Log files
+*.log
+
+# Environment variables
+.env
+
+# API keys (security)
+api_keys.txt
+config/api_key.txt

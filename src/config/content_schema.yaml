@@ -1,0 +1,280 @@
+# Advanced Educational Animation Content Schema
+# Shot-by-shot timeline with precise positioning and timing
+
+# GLOBAL LAYOUT SAFETY RULES — prevent overlaps and keep content within frame
+global_layout_rules:
+  safe_area:
+    margin_x: 0.7     # units from left/right edges
+    margin_y: 0.5     # units from top/bottom edges
+  spacing:
+    min_gap_between_elements: 0.6  # minimum gap between any two visible objects
+    min_gap_from_edge: 0.5         # minimum gap from frame edges
+  per_region_capacity:             # limit simultaneous elements per region
+    top_left: 1
+    top_center: 1
+    top_right: 1
+    center_left: 1
+    center: 1
+    center_right: 1
+    bottom_left: 1
+    bottom_center: 1
+    bottom_right: 1
+  text:
+    auto_wrap: true                # wrap long text instead of overflowing
+    max_chars_per_line: 28
+    max_lines: 3
+    autoscale_to_fit_region: true  # scale down font to fit region when needed
+  diagrams:
+    autoscale_to_fit_region: true
+    prefer_next_to: true           # use next_to(..., buff) for separation
+  policy:
+    require_clean_scene_between_shots: true  # clear or fade out before new shot
+    collision_avoidance: "use next_to(..., buff=min_gap_between_elements) and distinct regions"
+    keep_within_frame: true
+  camera:
+    max_zoom: 1.1
+    min_zoom: 0.9
+    pan_within_safe_area_only: true
+
+animation:
+  metadata:
+    topic: ""
+    total_duration: 60  # total video length in seconds
+    difficulty_level: ""  # beginner, intermediate, advanced
+    subject_area: ""  # mathematics, physics, chemistry, etc.
+    resolution: "1080p"
+    fps: 60
+  
+  # Shot-by-shot timeline (like film storyboard)
+  timeline:
+    shots:
+      - shot_id: "intro_01"
+        start_time: 0
+        end_time: 5
+        description: "Title card with topic"
+        scene_state: "clean"  # clean, overlay, build_on_previous
+        
+        # Visual elements in this shot
+        elements:
+          - element_id: "title"
+            type: "text"  # text, formula, shape, graph, image
+            content: "Topic Title"
+            position: "center"  # center, top, bottom, left, right, top_left, etc.
+            layer: 1  # 1=background, 2=midground, 3=foreground
+            style:
+              color: "BLUE"
+              font_size: 72
+              font_weight: "bold"
+            animation:
+              entry: "write"  # write, fade_in, slide_in, scale_in
+              entry_duration: 2
+              stay_duration: 1
+              exit: "fade_out"  # fade_out, slide_out, scale_out, transform_to
+              exit_duration: 1
+              
+        # Camera and layout
+        camera:
+          focus: "center"
+          zoom_level: 1.0
+          
+      - shot_id: "intro_02" 
+        start_time: 5
+        end_time: 12
+        description: "Hook question with visual"
+        scene_state: "clean"  # previous elements cleared
+        
+        elements:
+          - element_id: "hook_text"
+            type: "text"
+            content: "What makes atoms stick together?"
+            position: "top"
+            layer: 2
+            style:
+              color: "WHITE"
+              font_size: 48
+            animation:
+              entry: "fade_in"
+              entry_duration: 1
+              stay_duration: 5
+              exit: "fade_out" 
+              exit_duration: 1
+              
+          - element_id: "atom_visual"
+            type: "shape"
+            content: "atom_diagram"  # specific shape/diagram identifier
+            position: "center"
+            layer: 1
+            style:
+              color: "YELLOW"
+              radius: 2
+            animation:
+              entry: "scale_in"
+              entry_duration: 1.5
+              stay_duration: 4
+              exit: "scale_out"
+              exit_duration: 1.5
+              
+  # Detailed content sections with precise specifications
+  content_sections:
+    - section_id: "introduction"
+      title: "What is Chemical Bonding?"
+      start_time: 0
+      end_time: 15
+      shots: ["intro_01", "intro_02", "intro_03"]  # which shots belong to this section
+      
+      learning_objectives:
+        - "Understand atomic attraction forces"
+        - "Visualize electron behavior" 
+        
+      key_concepts:
+        - concept: "chemical bonding"
+          definition: "Forces that hold atoms together"
+          visual_representation: "magnets attracting"
+          
+  # Mathematical elements with precise specifications  
+  mathematical_elements:
+    formulas:
+      - formula_id: "coulomb_law"
+        latex: "F = k \\frac{q_1 q_2}{r^2}"
+        description: "Coulomb's law for ionic attraction"
+        position: "bottom_right"
+        style:
+          color: "BLUE"
+          font_size: 36
+          
+    graphs:
+      - graph_id: "potential_energy"
+        function: "1/x**2 - 1/x**6"  # Lennard-Jones potential
+        x_range: [0.5, 3]
+        y_range: [-2, 2]
+        color: "RED"
+        position: "center_right"
+        axes_labels: ["Distance (r)", "Energy (E)"]
+        special_points:
+          - [1.2, -1.0]  # equilibrium position
+          
+  # Visual coordination and positioning
+  layout:
+    screen_regions:
+      top_left: []
+      top_center: []
+      top_right: []
+      center_left: []
+      center: []
+      center_right: []
+      bottom_left: []
+      bottom_center: []
+      bottom_right: []
+    rules:
+      enforce_region_capacity: true
+      enforce_safe_area: true
+      min_gap: 0.6
+      text_wrap: true
+      autoscale_to_fit: true
+      
+    layers:
+      background: 1    # static elements, graphs, axes
+      midground: 2     # main content, formulas
+      foreground: 3    # highlights, annotations, callouts
+      overlay: 4       # temporary elements, transitions
+      
+  # Transition specifications between shots
+  transitions:
+    - from_shot: "intro_01"
+      to_shot: "intro_02"
+      type: "cross_fade"
+      duration: 0.5
+      clear_previous: true
+      
+    - from_shot: "intro_02" 
+      to_shot: "concept_01"
+      type: "slide_left"
+      duration: 1.0
+      clear_previous: true
+      
+  # Object lifecycle management
+  object_lifecycle:
+    - object_id: "title"
+      created_in: "intro_01"
+      destroyed_in: "intro_01"
+      transformations: []
+      
+    - object_id: "main_diagram"
+      created_in: "concept_01"
+      destroyed_in: "concept_03"
+      transformations:
+        - shot: "concept_02"
+          transform_type: "color_change" 
+          new_properties:
+            color: "GREEN"
+            
+  # Audio/narration timing (if needed)
+  narration:
+    segments:
+      - start_time: 0
+        end_time: 5
+        text: "Welcome to chemical bonding"
+        shot_id: "intro_01"
+        
+# Technical specifications for code generation
+technical_specs:
+  manim_version: "0.19.0"
+  scene_class_name: "EducationalScene"
+  
+  # Manim objects mapping
+  object_mapping:
+    text: "Text"
+    formula: "Tex" 
+    shape: "Circle, Rectangle, Polygon"
+    graph: "FunctionGraph"
+    axes: "Axes"
+    
+  # Animation mapping
+  animation_mapping:
+    write: "Write"
+    fade_in: "FadeIn"
+    fade_out: "FadeOut" 
+    scale_in: "GrowFromCenter"
+    scale_out: "ShrinkToCenter"
+    slide_in: "DrawBorderThenFill"
+    create: "Create"
+    
+  # Positioning system
+  positioning:
+    center: "ORIGIN"
+    top: "UP * 2.8"           # use safe-area-adjusted positions
+    bottom: "DOWN * 2.8"
+    left: "LEFT * 5.5"
+    right: "RIGHT * 5.5" 
+    top_left: "UP * 2.2 + LEFT * 4.5"
+    top_right: "UP * 2.2 + RIGHT * 4.5"
+    bottom_left: "DOWN * 2.2 + LEFT * 4.5"
+    bottom_right: "DOWN * 2.2 + RIGHT * 4.5"
+
+    # Layout safety rules for generation
+    layout_rules:
+      safe_area:
+        margin_x: 0.7
+        margin_y: 0.5
+      min_gap_between_elements: 0.6
+      per_region_capacity:
+        top_left: 1
+        top_center: 1
+        top_right: 1
+        center_left: 1
+        center: 1
+        center_right: 1
+        bottom_left: 1
+        bottom_center: 1
+        bottom_right: 1
+      text:
+        auto_wrap: true
+        max_chars_per_line: 28
+        max_lines: 3
+        autoscale_to_fit_region: true
+      diagrams:
+        autoscale_to_fit_region: true
+      enforcement:
+        clear_between_shots: true
+        prefer_next_to_with_buff: true
+        keep_within_frame: true

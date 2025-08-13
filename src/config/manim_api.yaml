@@ -1,0 +1,326 @@
+# Manim API Reference for Code Generation
+# Correct modern Manim syntax and patterns
+
+manim_api:
+  version: "0.19.0"
+  
+  # Layout safety rules for code generation (anti-overlap, in-frame)
+  layout_rules:
+    safe_area_margin:
+      x: 0.7   # units from left/right edges
+      y: 0.5   # units from top/bottom edges
+    min_gap_between_objects: 0.6
+    per_region_capacity:
+      top: 1
+      center: 1
+      bottom: 1
+      left: 1
+      right: 1
+    text:
+      auto_wrap: true
+      max_chars_per_line: 28
+      autoscale_to_fit: true
+    enforce_clear_between_shots: true
+    collision_avoidance_hint: "Prefer next_to(..., buff=min_gap_between_objects) over manual coordinates"
+  
+  # Core imports
+  imports:
+    required: "from manim import *"
+    optional_imports:
+      - "import numpy as np"
+      - "import math"
+      
+  # Scene class structure
+  scene_structure:
+    class_definition: "class AnimationScene(Scene):"
+    main_method: "def construct(self):"
+    
+  # Text and Typography
+  text_objects:
+    Text:
+      class_name: "Text"
+      constructor: 'Text("content")'
+      properties:
+        - "color=BLUE"
+        - "font_size=48"
+        - "font='Arial'"
+      methods:
+        - ".scale(factor)"
+        - ".move_to(position)"
+        - ".next_to(object, direction)"
+        - ".to_edge(direction)"
+        
+    Tex:
+      class_name: "Tex" 
+      constructor: 'Tex(r"\\LaTeX code")'
+      properties:
+        - "color=WHITE"
+        - "font_size=48"
+      examples:
+        - 'Tex(r"\\int_0^1 x^2 dx")'
+        - 'Tex("E = mc^2")'
+        
+    MathTex:
+      class_name: "MathTex"
+      constructor: 'MathTex("math expression")'
+      examples:
+        - 'MathTex("x^2 + y^2 = r^2")'
+        
+  # Shapes and Geometry
+  shapes:
+    Circle:
+      class_name: "Circle"
+      constructor: "Circle(radius=1)"
+      properties:
+        - "color=WHITE"
+        - "fill_color=BLUE"
+        - "fill_opacity=0.5"
+        - "stroke_width=2"
+        
+    Rectangle:
+      class_name: "Rectangle"
+      constructor: "Rectangle(width=2, height=1)"
+      properties:
+        - "color=WHITE"
+        - "fill_color=RED"
+        
+    Square:
+      class_name: "Square"
+      constructor: "Square(side_length=2)"
+      
+    Line:
+      class_name: "Line"
+      constructor: "Line(start, end)"
+      
+    Arrow:
+      class_name: "Arrow"
+      constructor: "Arrow(start, end)"
+      
+  # Graphs and Functions
+  graphs:
+    FunctionGraph:
+      class_name: "FunctionGraph"
+      constructor: "FunctionGraph(lambda x: x**2, x_range=[-3, 3])"
+      properties:
+        - "color=BLUE"
+        - "stroke_width=2"
+      examples:
+        - "FunctionGraph(lambda x: np.sin(x), x_range=[0, 2*PI], color=RED)"
+        
+    Axes:
+      class_name: "Axes"
+      constructor: "Axes(x_range=[-5, 5], y_range=[-3, 3])"
+      properties:
+        - "color=WHITE"
+        - "stroke_width=1"
+        
+  # Animations - CORRECT MODERN SYNTAX
+  animations:
+    # Creation animations
+    Write:
+      animation_name: "Write"
+      usage: "self.play(Write(text_object))"
+      for_objects: ["Text", "Tex", "MathTex"]
+      
+    Create:
+      animation_name: "Create"
+      usage: "self.play(Create(shape_object))"
+      for_objects: ["Circle", "Rectangle", "Line", "FunctionGraph", "Axes"]
+      note: "MODERN REPLACEMENT for ShowCreation"
+      
+    DrawBorderThenFill:
+      animation_name: "DrawBorderThenFill" 
+      usage: "self.play(DrawBorderThenFill(shape))"
+      for_objects: ["Circle", "Rectangle", "Polygon"]
+      
+    # Appearance animations
+    FadeIn:
+      animation_name: "FadeIn"
+      usage: "self.play(FadeIn(object))"
+      for_objects: ["any object"]
+      
+    FadeOut:
+      animation_name: "FadeOut"
+      usage: "self.play(FadeOut(object))"
+      for_objects: ["any object"]
+      
+    GrowFromCenter:
+      animation_name: "GrowFromCenter"
+      usage: "self.play(GrowFromCenter(object))"
+      for_objects: ["shapes", "text"]
+      
+    ShrinkToCenter:
+      animation_name: "ShrinkToCenter"
+      usage: "self.play(ShrinkToCenter(object))"
+      for_objects: ["shapes", "text"]
+      
+    # Transformation animations
+    Transform:
+      animation_name: "Transform"
+      usage: "self.play(Transform(obj1, obj2))"
+      note: "obj1 becomes obj2, obj1 remains in scene"
+      
+    ReplacementTransform:
+      animation_name: "ReplacementTransform"
+      usage: "self.play(ReplacementTransform(obj1, obj2))"
+      note: "obj1 is replaced by obj2"
+      
+    # Movement animations
+    Rotate:
+      animation_name: "Rotate"
+      usage: "self.play(Rotate(object, angle))"
+      examples:
+        - "self.play(Rotate(square, PI/2))"
+        
+    # DEPRECATED - DO NOT USE
+    deprecated:
+      ShowCreation: "Use Create instead"
+      ShowIncreasingSubsets: "Use succession of Create"
+      ShowSubmobjectsOneByOne: "Use AnimationGroup with lag_ratio"
+      
+  # Positioning and Layout
+  positioning:
+    constants:
+      ORIGIN: "[0, 0, 0]"
+      UP: "[0, 1, 0]"
+      DOWN: "[0, -1, 0]" 
+      LEFT: "[-1, 0, 0]"
+      RIGHT: "[1, 0, 0]"
+    named_positions:
+      center: "ORIGIN"
+      top: "UP * 2.8"
+      bottom: "DOWN * 2.8"
+      left: "LEFT * 5.5"
+      right: "RIGHT * 5.5"
+      top_left: "UP * 2.2 + LEFT * 4.5"
+      top_right: "UP * 2.2 + RIGHT * 4.5"
+      bottom_left: "DOWN * 2.2 + LEFT * 4.5"
+      bottom_right: "DOWN * 2.2 + RIGHT * 4.5"
+
+# Duplicate top-level positioning for generator consumption
+positioning:
+  center: "ORIGIN"
+  top: "UP * 2.8"
+  bottom: "DOWN * 2.8"
+  left: "LEFT * 5.5"
+  right: "RIGHT * 5.5"
+  top_left: "UP * 2.2 + LEFT * 4.5"
+  top_right: "UP * 2.2 + RIGHT * 4.5"
+  bottom_left: "DOWN * 2.2 + LEFT * 4.5"
+  bottom_right: "DOWN * 2.2 + RIGHT * 4.5"
+
+# Optional top-level layout_rules so downstream tools can read without nesting
+layout_rules:
+  safe_area_margin:
+    x: 0.7
+    y: 0.5
+  min_gap_between_objects: 0.6
+  per_region_capacity:
+    top: 1
+    center: 1
+    bottom: 1
+    left: 1
+    right: 1
+  text:
+    auto_wrap: true
+    max_chars_per_line: 28
+    autoscale_to_fit: true
+      
+    methods:
+      move_to:
+        usage: "object.move_to(position)"
+        examples:
+          - "text.move_to(UP * 2)"
+          - "circle.move_to(LEFT * 3 + UP * 1)"
+          
+      next_to:
+        usage: "object.next_to(reference, direction)"
+        examples:
+          - "label.next_to(circle, DOWN)"
+          - "formula.next_to(graph, RIGHT)"
+          
+      to_edge:
+        usage: "object.to_edge(direction)"
+        examples:
+          - "title.to_edge(UP)"
+          - "footer.to_edge(DOWN)"
+          
+      shift:
+        usage: "object.shift(vector)"
+        examples:
+          - "object.shift(RIGHT * 2)"
+          
+  # Colors
+  colors:
+    basic: ["WHITE", "BLACK", "RED", "GREEN", "BLUE", "YELLOW", "PURPLE", "ORANGE"]
+    extended: ["PINK", "MAROON", "LIGHT_BLUE", "DARK_BLUE", "LIGHT_GREEN", "DARK_GREEN"]
+    
+  # Scene management patterns
+  scene_patterns:
+    clear_scene:
+      method: "self.clear()"
+      usage: "Clear all objects from scene"
+    fadeout_all:
+      method: "self.play(FadeOut(*self.mobjects))"
+      usage: "Fade out everything currently on screen"
+      
+    wait:
+      method: "self.wait(duration)"
+      usage: "self.wait(2)  # pause for 2 seconds"
+      
+    play_multiple:
+      usage: "self.play(Write(text), Create(circle), run_time=3)"
+      
+    sequential_animations:
+      pattern: |
+        self.play(Write(title))
+        self.wait(1)
+        self.play(Create(circle))
+        self.wait(1)
+        self.play(FadeOut(title), FadeOut(circle))
+        
+  # Common mistakes to avoid
+  common_mistakes:
+    - mistake: "Using ShowCreation"
+      correct: "Use Create instead"
+      
+    - mistake: "Not clearing objects between sections"
+      correct: "Use FadeOut or self.clear()"
+      
+    - mistake: "Overlapping text"
+      correct: "Use proper positioning with next_to() or move_to()"
+
+    - mistake: "Placing content outside the frame"
+      correct: "Use named_positions and keep a safe margin from edges"
+
+    - mistake: "Too many elements in the same region"
+      correct: "Limit to per_region_capacity and separate with buff >= 0.6"
+      
+    - mistake: "Missing run_time parameter"
+      correct: "Add run_time=2 for controlled timing"
+      
+  # Best practices for educational animations
+  best_practices:
+    timing:
+      - "Use run_time parameter for consistent pacing"
+      - "Add self.wait() between major concepts"
+      - "Keep individual animations 1-3 seconds"
+      
+    layout:
+      - "Position elements in consistent regions" 
+      - "Leave space between objects"
+      - "Use layers: background, main content, highlights"
+      - "Respect safe area: ≥0.5 units from edges"
+      - "Limit to one primary element per region"
+      - "Wrap or scale text so it fits its region"
+      - "Use next_to(..., buff>=0.6) instead of manual overlapping coordinates"
+      
+    transitions:
+      - "Clear previous elements before new sections"
+      - "Use FadeOut for smooth transitions"
+      - "Group related animations with AnimationGroup"
+      
+    educational_flow:
+      - "Introduce concept → Show visual → Explain → Practice"
+      - "Build complexity gradually"
+      - "Use consistent visual metaphors"
