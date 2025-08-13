@@ -1,0 +1,99 @@
+animation:
+  conclusion:
+    key_takeaway: The whole world around us, from the air we breathe to the objects
+      we use, is made up of atoms connected by chemical bonds. Understanding these
+      bonds helps us understand the world at its most fundamental level.
+    summary_points:
+    - Chemical bonding is about achieving a stable electron configuration
+    - 'There are three types of chemical bonding: Ionic, covalent, and metallic'
+  content_sections:
+  - concepts:
+    - atomic structure
+    - octet rule
+    duration: 15
+    narration: Atoms are made up of electrons, protons, and neutrons. The Octet Rule
+      is a chemical rule of thumb that reflects the theory that main-group elements
+      tend to bond in such a way that each atom has eight electrons in its valence
+      shell, giving it the same electronic configuration as a noble gas.
+    section_id: atomic_structure
+    title: Atomic Structure and the Octet Rule
+    visuals:
+    - animation_type: fade_in
+      content: Atomic structure
+      type: diagram
+  - concepts:
+    - ionic bonding
+    - cation
+    - anion
+    duration: 15
+    narration: Ionic bonding occurs between metals and non-metals. Here, one atom
+      gives up one or more electrons to another atom. So, one atom becomes positively
+      charged, and the other atom becomes negatively charged.
+    section_id: ionic_bonding
+    title: Ionic Bonding
+    visuals:
+    - animation_type: write
+      content: Ionic bonding
+      type: diagram
+  - concepts:
+    - covalent bonding
+    - electron sharing
+    duration: 15
+    narration: Covalent bonding occurs between non-metals. Here, atoms share electrons
+      to achieve a stable electron configuration.
+    section_id: covalent_bonding
+    title: Covalent Bonding
+    visuals:
+    - animation_type: write
+      content: Covalent bonding
+      type: diagram
+  - concepts:
+    - metallic bonding
+    - sea of electrons
+    duration: 15
+    narration: In metallic bonding, positive ions are surrounded by a cloud of rapidly
+      moving dislocated electrons. This is often described as a 'sea of electrons'.
+    section_id: metallic_bonding
+    title: Metallic Bonding
+    visuals:
+    - animation_type: write
+      content: Metallic bonding
+      type: diagram
+  introduction:
+    hook: What makes water, a diamond, or a lump of sodium chloride? It's all about
+      the bonds!
+    learning_objectives:
+    - Understand what chemical bonding is and its importance.
+    - Learn the different types of chemical bonding.
+    title: The Incredible World of Chemical Bonding
+  mathematical_elements:
+    formulas:
+    - E = k (Q1 Q2) / r
+    graphs:
+    - color: BLUE
+      domain:
+      - 0
+      - 10
+      function: 1/r
+  metadata:
+    difficulty_level: beginner
+    duration: 60
+    subject_area: Chemistry
+    topic: Chemical Bonding
+  visual_metaphors:
+  - concept: Octet rule
+    implementation: Show an animation of a party room with eight seats, representing
+      the desire of atoms to have eight electrons in their outer shell.
+    metaphor: A party with 8 seats
+  - concept: Ionic bonding
+    implementation: Show an animation of one character giving something to another,
+      representing the transfer of electrons in ionic bonding.
+    metaphor: A give-and-take relationship
+  - concept: Covalent bonding
+    implementation: Show an animation of two characters sharing a pizza, representing
+      the sharing of electrons in covalent bonding.
+    metaphor: Sharing a pizza
+  - concept: Metallic bonding
+    implementation: Show an animation of a crowd at a concert, representing the 'sea
+      of electrons' in metallic bonding.
+    metaphor: A concert crowd

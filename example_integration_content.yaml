@@ -1,0 +1,93 @@
+animation:
+  metadata:
+    topic: "Integration"
+    duration: 60
+    difficulty_level: "beginner"
+    subject_area: "mathematics"
+  
+  introduction:
+    title: "Understanding Integration"
+    hook: "What if I told you that integration is just counting in a very clever way?"
+    learning_objectives: 
+      - "Understand what integration represents geometrically"
+      - "See how integration relates to area under curves"
+      - "Learn the fundamental theorem of calculus visually"
+  
+  content_sections:
+    - section_id: "intro"
+      title: "What is Integration?"
+      duration: 15
+      concepts: ["integration", "area under curve", "definite integral"]
+      visuals:
+        - type: "text"
+          content: "Integration"
+          animation_type: "write"
+        - type: "formula"
+          content: "\\int_a^b f(x) dx"
+          animation_type: "write"
+      narration: "Integration is fundamentally about finding areas under curves"
+      
+    - section_id: "geometric"
+      title: "Geometric Interpretation"
+      duration: 20
+      concepts: ["area calculation", "riemann sums", "approximation"]
+      visuals:
+        - type: "graph"
+          content: "parabolic function"
+          animation_type: "draw"
+        - type: "diagram"
+          content: "rectangles under curve"
+          animation_type: "show_creation"
+      narration: "We can approximate the area using rectangles"
+      
+    - section_id: "fundamental"
+      title: "Fundamental Theorem"
+      duration: 15
+      concepts: ["antiderivative", "evaluation", "exact area"]
+      visuals:
+        - type: "formula"
+          content: "F(b) - F(a)"
+          animation_type: "transform"
+        - type: "text"
+          content: "Exact area calculation"
+          animation_type: "fade_in"
+      narration: "The fundamental theorem gives us an exact method"
+      
+    - section_id: "example"
+      title: "Worked Example"
+      duration: 10
+      concepts: ["specific calculation", "step by step"]
+      visuals:
+        - type: "formula"
+          content: "\\int_0^2 x^2 dx = \\frac{8}{3}"
+          animation_type: "write"
+      narration: "Let's see integration in action"
+      
+  mathematical_elements:
+    formulas: 
+      - "\\int_a^b f(x) dx"
+      - "F(b) - F(a)"
+      - "\\int_0^2 x^2 dx = \\frac{8}{3}"
+    graphs:
+      - function: "x**2"
+        domain: [0, 2]
+        color: "BLUE"
+        special_points: [[0, 0], [2, 4]]
+      - function: "0.5*x**2 - 1"
+        domain: [-2, 3]
+        color: "GREEN"
+        
+  visual_metaphors:
+    - concept: "integration"
+      metaphor: "filling up water under a curve"
+      implementation: "animated area filling"
+    - concept: "riemann sum"
+      metaphor: "stacking blocks to approximate"
+      implementation: "rectangles appearing one by one"
+      
+  conclusion:
+    summary_points: 
+      - "Integration finds area under curves"
+      - "Riemann sums provide approximation"
+      - "Fundamental theorem gives exact values"
+    key_takeaway: "Integration transforms calculus into geometry"
