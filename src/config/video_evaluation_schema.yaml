@@ -1,0 +1,95 @@
+# Video Evaluation Schema for Gemini 2.5 Flash-Lite
+# Defines the structure for video quality assessment feedback
+
+evaluation_response:
+  status: # "issue_found" or "correct"
+    type: "string"
+    required: true
+    enum: ["issue_found", "correct"]
+  
+  issues: # Only present if status is "issue_found"
+    type: "array"
+    required_if_status: "issue_found"
+    items:
+      - issue_id: "string"
+        category: "string"  # "overlap", "out_of_frame", "visual_correctness", "timing"
+        severity: "string"  # "critical", "major", "minor"
+        description: "string"
+        timestamp: "number"  # seconds into video where issue occurs
+        affected_elements: 
+          - element_type: "string"  # "text", "shape", "formula", "graph"
+            element_description: "string"
+            position_issue: "string"  # specific positioning problem
+        suggested_fix:
+          action: "string"  # "reposition", "resize", "remove", "modify_timing"
+          specific_changes: "string"  # detailed fix instructions
+
+# Example evaluation responses
+examples:
+  correct_response:
+    status: "correct"
+    
+  issue_found_response:
+    status: "issue_found" 
+    issues:
+      - issue_id: "overlap_001"
+        category: "overlap"
+        severity: "critical"
+        description: "Title text overlaps with mathematical formula"
+        timestamp: 5.2
+        affected_elements:
+          - element_type: "text"
+            element_description: "Main title 'Integration Basics'"
+            position_issue: "Extends into center region occupied by formula"
+          - element_type: "formula"
+            element_description: "LaTeX formula '∫x²dx'"
+            position_issue: "Positioned too close to title text"
+        suggested_fix:
+          action: "reposition"
+          specific_changes: "Move title to top region, ensure 0.6 unit gap from formula"
+          
+      - issue_id: "frame_001" 
+        category: "out_of_frame"
+        severity: "major"
+        description: "Graph extends beyond right edge of video frame"
+        timestamp: 12.8
+        affected_elements:
+          - element_type: "graph"
+            element_description: "Function plot of y=x²"
+            position_issue: "X-axis extends past safe area margin"
+        suggested_fix:
+          action: "resize"
+          specific_changes: "Scale graph to fit within safe_area_margin (0.7 units from edge)"
+
+# Gemini evaluation criteria
+evaluation_criteria:
+  visual_correctness:
+    - "All text is clearly readable and properly formatted"
+    - "Mathematical formulas render correctly without errors"
+    - "Colors provide sufficient contrast for visibility" 
+    - "Animations are smooth and professional"
+    
+  overlap_detection:
+    - "No visual elements occupy the same screen space simultaneously"
+    - "Text doesn't overlap with shapes, formulas, or other text"
+    - "Graph axes don't interfere with labels or other content"
+    - "Minimum gap of 0.6 units maintained between all elements"
+    
+  frame_boundaries:
+    - "All content stays within safe area margins (0.7x, 0.5y from edges)"
+    - "No text or shapes are cut off by video boundaries"
+    - "Full visibility of all educational content throughout animation"
+    - "Proper scaling for video resolution (1080p standard)"
+    
+  timing_issues:
+    - "Elements appear and disappear at appropriate times"
+    - "No flickering or premature element removal"
+    - "Smooth transitions between animation segments"
+    - "Adequate display time for reading text content"
+
+# Response format for code integration
+code_integration:
+  success_check: "response['status'] == 'correct'"
+  issue_processing: "iterate through response['issues']"
+  fix_application: "send issues to LLM for code corrections"
+  retry_logic: "re-evaluate video after fixes applied"

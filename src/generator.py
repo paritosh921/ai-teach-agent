@@ -6,18 +6,41 @@ import yaml
 from typing import Optional, Tuple, Dict, Any, List
 import openai
 from openai import OpenAI
+try:
+    from video_evaluator import VideoEvaluator
+    GEMINI_AVAILABLE = True
+except ImportError:
+    VideoEvaluator = None
+    GEMINI_AVAILABLE = False
 
 class FinalManimGenerator:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, gemini_api_key: str = None):
         """Initialize the final Manim generator with advanced shot-by-shot approach."""
         self.client = OpenAI(api_key=api_key)
         self.output_dir = "output/animations"
         self.content_dir = "output/content"
+        self.feedback_dir = "output/feedback"
         self.max_retries = 5
+        self.max_video_quality_iterations = 3
+        
+        # Initialize video evaluator if Gemini key provided
+        self.video_evaluator = None
+        if gemini_api_key and GEMINI_AVAILABLE:
+            try:
+                self.video_evaluator = VideoEvaluator(gemini_api_key)
+                print("Video quality evaluation enabled with Gemini 2.5 Flash-Lite")
+            except Exception as e:
+                print(f"Video evaluator initialization failed: {e}")
+                print("Continuing without video quality evaluation")
+        elif gemini_api_key and not GEMINI_AVAILABLE:
+            print("Gemini API not available (google-genai not installed)")
+            print("Install with: pip install google-genai")
+            print("Continuing without video quality evaluation")
         
         # Create directories
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.content_dir, exist_ok=True)
+        os.makedirs(self.feedback_dir, exist_ok=True)
         
         # Load Manim API reference and parameter fixes
         self.manim_api = self._load_manim_api_reference()
@@ -105,17 +128,17 @@ class FinalManimGenerator:
                     return nested
         except Exception:
             pass
-        # Conservative defaults within frame
+        # Content region defaults for proper educational layout
         return {
             'center': 'ORIGIN',
-            'top': 'UP * 2.8',
-            'bottom': 'DOWN * 2.8',
-            'left': 'LEFT * 5.5',
-            'right': 'RIGHT * 5.5',
-            'top_left': 'UP * 2.2 + LEFT * 4.5',
-            'top_right': 'UP * 2.2 + RIGHT * 4.5',
-            'bottom_left': 'DOWN * 2.2 + LEFT * 4.5',
-            'bottom_right': 'DOWN * 2.2 + RIGHT * 4.5',
+            'top': 'UP * 2.5',
+            'bottom': 'DOWN * 2.5',
+            'left': 'LEFT * 4',
+            'right': 'RIGHT * 4',
+            'top_left': 'UP * 2.5 + LEFT * 4',
+            'top_right': 'UP * 2.5 + RIGHT * 4',
+            'bottom_left': 'DOWN * 2.5 + LEFT * 4',
+            'bottom_right': 'DOWN * 2.5 + RIGHT * 4',
         }
     
     def generate_detailed_content_yaml(self, topic: str) -> Optional[Dict[Any, Any]]:
@@ -134,54 +157,66 @@ class FinalManimGenerator:
         Create a detailed shot-by-shot educational animation structure for: "{topic}"
         
         You are creating a professional educational video like 3Blue1Brown with:
-        1. PRECISE TIMING for each visual element
-        2. CLEAR POSITIONING to prevent overlaps  
-        3. SHOT-BY-SHOT breakdown like a film storyboard
-        4. OBJECT LIFECYCLE management (create → use → remove)
+        1. RICH EDUCATIONAL CONTENT with specific concepts, formulas, and visual demonstrations
+        2. PRECISE TIMING for each visual element
+        3. CLEAR POSITIONING to prevent overlaps using proper screen regions
+        4. SHOT-BY-SHOT breakdown like a film storyboard
+        5. OBJECT LIFECYCLE management (create → use → remove)
         
         Follow this advanced schema structure:
         {schema_example}
         
         CRITICAL REQUIREMENTS:
         
-        1. Timeline with precise shots:
+        1. Timeline with precise shots (8-12 shots minimum):
            - Each shot: start_time, end_time, scene_state
            - scene_state: "clean" (clear previous) or "build_on_previous"
-           - NO overlapping visual elements; if multiple elements, place them in different screen regions
+           - NO overlapping visual elements; use different screen regions (top, center, bottom, left, right)
         
-        2. Element specifications:
-           - Exact position (center, top_left, bottom_right, etc.) using NAMED POSITIONS only
+        2. Element specifications with PROPER POSITIONING:
+           - Use ONLY these positions: center, top, bottom, left, right, top_left, top_right, bottom_left, bottom_right
+           - NEVER use safe_bottom or edge positions - use center, top, or bottom regions
            - Layer (1=background, 2=main, 3=foreground)
            - Animation timing (entry_duration, stay_duration, exit_duration)
            - Use next_to(reference, DIRECTION, buff) with buff >= {self.layout_rules.get('min_gap_between_objects', 0.6)} when placing related objects
         
-        3. Object lifecycle:
-           - When each object is created
-           - When it's transformed
-           - When it's removed from scene
+        3. RICH EDUCATIONAL CONTENT (MANDATORY):
+           - Specific mathematical formulas (not generic text)
+           - Concrete examples with numbers and calculations
+           - Visual diagrams (graphs, charts, geometric shapes)
+           - Real-world applications and connections
+           - Progressive complexity from simple to advanced
         
-        4. Educational flow:
-           - Introduce concept → Show visual → Explain → Clear → Next
-           - Each concept gets its own clean shot
-           - Build complexity step by step
+        4. Educational flow progression:
+           a) Hook/Question (engaging opener with specific problem)
+           b) Foundations/Definitions (precise definitions with context)
+           c) Core Concepts (key principles with visual support)
+           d) Visual Demonstrations (graphs, diagrams, step-by-step examples)
+           e) Worked Examples (specific numerical examples)
+           f) Applications (real-world connections)
+           g) Advanced Insights (edge cases, generalizations)
+           h) Summary/Key Takeaways (memorable conclusions)
         
-        4.1 Curriculum progression (MANDATORY):
-           - Sections and shots must progress from basics to advanced:
-             a) Foundations/Definitions
-             b) Core Concepts
-             c) Visual Demonstrations (charts/graphs/diagrams)
-             d) Applications/Examples
-             e) Advanced Insights/Edge cases
-             f) Summary/Key Takeaways
-           - Include charts and diagrams using axes and function graphs where relevant.
-           - Prefer simple shapes to depict diagrams; avoid external assets.
+        5. Visual Elements (MANDATORY):
+           - For mathematics: Include specific functions, graphs with axes, coordinate systems
+           - For physics: Include diagrams, force vectors, field lines, particle interactions
+           - For chemistry: Include molecular structures, reaction diagrams, energy plots
+           - Use type: "graph" for mathematical functions with specific equations
+           - Use type: "diagram" for conceptual illustrations
+           - Use type: "formula" for mathematical expressions
+           - Specify exact content (not placeholders like "graph" or "diagram")
 
-        5. LAYOUT SAFETY (MANDATORY):
+        6. LAYOUT SAFETY (MANDATORY):
            - Respect SAFE AREA margins: x ≥ {self.layout_rules.get('safe_area_margin', {}).get('x', 0.7)}, y ≥ {self.layout_rules.get('safe_area_margin', {}).get('y', 0.5)}
            - Per-region capacity: max 1 element visible per region at the same time
            - Min gap between elements: ≥ {self.layout_rules.get('min_gap_between_objects', 0.6)}
-           - Wrap or scale text to fit its region; avoid long single-line strings
-           - Prefer 'clean' shots; if build_on_previous, ensure no overlaps
+           - Use proper regions: center for main content, top for titles, bottom for conclusions
+           - NEVER place content at edges or use safe_bottom positioning
+        
+        EXAMPLES OF RICH CONTENT:
+        - For "Integration": Include specific integrals like ∫x²dx, Riemann sums, area under curves
+        - For "Electrostatics": Include Coulomb's law F=kq₁q₂/r², electric field diagrams, point charges
+        - For "Chemical Bonding": Include Lewis structures, molecular orbital diagrams, electronegativity charts
         
         IMPORTANT: Include a technical_specs section that contains 'positioning' and 'layout_rules' matching the constraints above.
         
@@ -240,9 +275,20 @@ class FinalManimGenerator:
         }
         
         prompt = f"""
-        Generate clean, working Manim code using this shot-by-shot structure:
+        Generate a 3Blue1Brown style educational mathematics video using this shot-by-shot structure:
 
         Content: {yaml.dump(content_summary, default_flow_style=False)}
+        
+        3BLUE1BROWN STYLE REQUIREMENTS (CRITICAL):
+        
+        0. Video Style and Quality:
+           - Dark minimalist background: self.camera.background_color = "#0c0c0c"
+           - 3Blue1Brown colors: primary_color = "#58C4DD", secondary_color = "#FFD166", accent_color = "#FF6B6B", text_color = "#ECECF1"
+           - Smooth continuous animations with rate_func=smooth
+           - No overlapping content - use adequate spacing and margins
+           - All content stays fully inside video frame
+           - Step-by-step flow with gradual concept introduction
+           - Consistent color coding for related concepts
         
         MANIM API REQUIREMENTS (CRITICAL):
         
@@ -277,23 +323,19 @@ class FinalManimGenerator:
            - Add waits: self.wait(1)
            - Clear between sections: self.play(FadeOut(*self.mobjects))
            
-        6. Dynamic Frame (REQUIRED):
-           - At the top of construct(self), define dynamic safe frame values:
-             fw = config.frame_width
-             fh = config.frame_height
-             margin_x = {self.layout_rules.get('safe_area_margin', {}).get('x', 0.7)}
-             margin_y = {self.layout_rules.get('safe_area_margin', {}).get('y', 0.5)}
-             safe_left = LEFT * (fw/2 - margin_x)
-             safe_right = RIGHT * (fw/2 - margin_x)
-             safe_top = UP * (fh/2 - margin_y)
-             safe_bottom = DOWN * (fh/2 - margin_y)
-             # Corners
-             safe_top_left = safe_top + safe_left
-             safe_top_right = safe_top + safe_right
-             safe_bottom_left = safe_bottom + safe_left
-             safe_bottom_right = safe_bottom + safe_right
-           - Use these safe_* positions for move_to()/next_to()/to_edge() and ensure everything stays in-frame
-           - For wide text/diagrams: use .scale_to_fit_width(fw - 2*margin_x) or .scale_to_fit_height(fh - 2*margin_y)
+        6. 3Blue1Brown Positioning System (REQUIRED):
+           - Use safe content regions to ensure EVERYTHING stays in frame:
+             # Define safe content regions (reduced for 4K safety)
+             top_region = UP * 2.2      # For titles and headers (SAFE)
+             center_region = ORIGIN     # For main content  
+             bottom_region = DOWN * 2.2 # For conclusions and summaries (SAFE)
+             left_region = LEFT * 3.5   # For side content (SAFE)
+             right_region = RIGHT * 3.5 # For side content (SAFE)
+           - Use smooth morphing transitions: ReplacementTransform(obj1, obj2)
+           - No abrupt jumps - always FadeIn/FadeOut with shift parameters
+           - Use move_to() with regions: title.move_to(top_region)
+           - Use next_to() for related elements: formula.next_to(graph, DOWN, buff=0.8)
+           - All animations use rate_func=smooth for professional feel
 
         7. Layout Safety (MANDATORY):
            - Per-region capacity: Max 1 element visible per region per shot
@@ -301,12 +343,34 @@ class FinalManimGenerator:
            - For long text, reduce font_size or split into multiple lines so it fits within safe area
            - Avoid manual coordinates that push objects off-screen
 
-        8. Visual Elements (ENCOURAGED):
-           - Use Axes + functions for graphs; add dots/labels where meaningful
-           - Build simple bar charts with Axes and Rectangle groups if needed
-           - Use NumberPlane for geometric demonstrations
+        8. Rich Visual Elements (MANDATORY):
+           - For mathematical graphs: Use MODERN Manim syntax:
+             Example: axes = Axes(x_range=[-3, 3], y_range=[-1, 9])
+                      graph = axes.plot(lambda t: t**2)  # NO color parameter in plot()
+                      graph.set_color(BLUE)  # Set color separately
+           - For area under curve: Use axes.get_area(graph, x_range=[a, b])
+           - For formulas: Use MathTex() for LaTeX expressions
+             Example: formula = MathTex(r"\\int x^2 \\, dx = \\frac{{x^3}}{{3}} + C")
+           - For diagrams: Build with basic shapes (Circle, Rectangle, Arrow, Line)
+           - For physics: Use Vector, Arrow, Dot for force diagrams and field lines
+           - For chemistry: Use Circle + Text for atoms, Line for bonds
+           - Replace generic placeholders with actual educational content
 
-        9. Asset usage constraints (IMPORTANT):
+        9. Content Requirements (CRITICAL):
+           - NO generic placeholders like Circle() for "graph"
+           - Create ACTUAL mathematical content (specific functions, real formulas)
+           - Use proper LaTeX formatting for mathematical expressions
+           - Include numerical examples and calculations
+           - Build step-by-step visual demonstrations
+           
+        10. Variable Scope and Syntax (CRITICAL):
+           - Use 't' as the parameter in lambda functions: lambda t: t**2
+           - Properly escape LaTeX: use double backslashes \\\\frac, \\\\int
+           - Define all variables before using them
+           - Use consistent variable names throughout
+           - Test basic syntax: parentheses, commas, quotation marks
+
+        11. Asset usage constraints (IMPORTANT):
            - Do NOT use ImageMobject or any external files (no images, no videos).
            - If the content includes an image, replace it with a simple placeholder such as a Circle or a Text label.
            - Do NOT call any .set_weight() or use weight/style parameters.
@@ -660,6 +724,10 @@ class FinalManimGenerator:
         
         # Simplification rules
         simplifications = [
+            # Fix deprecated get_graph with color parameter
+            (r'(\w+)\.get_graph\(([^,]+),\s*color=(\w+)\)', r'\1_graph = \1.plot(\2)\n        \1_graph.set_color(\3)'),
+            (r'axes\.get_graph\(([^,]+),\s*color=(\w+)\)', r'graph = axes.plot(\1)\n        graph.set_color(\2)'),
+            
             # Remove style/weight methods that can cause issues
             (r'\.set_weight\([^)]+\)', ''),
             (r'\.set_style\([^)]+\)', ''),
@@ -856,22 +924,29 @@ class EducationalScene(Scene):
         print(f"\nCreating professional animation for: '{topic}'")
         print("=" * 70)
         
-        # Phase 1: Generate detailed content structure
-        content = self.generate_detailed_content_yaml(topic)
-        if not content:
-            print("ERROR: Failed to generate content structure")
-            return None
-        
-        # Save content for debugging
-        content_path = os.path.join(self.content_dir, f"{topic.replace(' ', '_').lower()}_detailed.yaml")
-        with open(content_path, 'w', encoding='utf-8') as f:
-            yaml.dump(content, f, default_flow_style=False, allow_unicode=True)
-        print(f"SUCCESS: Detailed content saved to: {content_path}")
-        
-        # Phase 2: Generate shot-based Manim code
-        code = self.generate_shot_based_manim_code(content)
-        if not code:
-            print("ERROR: Failed to generate Manim code")
+        try:
+            # Phase 1: Generate detailed content structure
+            content = self.generate_detailed_content_yaml(topic)
+            if not content:
+                print("ERROR: Failed to generate content structure")
+                return None
+            
+            # Save content for debugging
+            content_path = os.path.join(self.content_dir, f"{topic.replace(' ', '_').lower()}_detailed.yaml")
+            with open(content_path, 'w', encoding='utf-8') as f:
+                yaml.dump(content, f, default_flow_style=False, allow_unicode=True)
+            print(f"SUCCESS: Detailed content saved to: {content_path}")
+            
+            # Phase 2: Generate shot-based Manim code
+            code = self.generate_shot_based_manim_code(content)
+            if not code:
+                print("ERROR: Failed to generate Manim code")
+                return None
+                
+        except Exception as e:
+            print(f"ERROR: Unexpected error during content generation: {e}")
+            import traceback
+            traceback.print_exc()
             return None
         
         # Clean code formatting
@@ -899,6 +974,16 @@ class EducationalScene(Scene):
                 print("SUCCESS: Animation created successfully!")
                 if stdout:
                     print("SUCCESS: Output:", stdout[-300:])  # Last 300 chars
+                
+                # Phase 3: Video Quality Evaluation (if enabled)
+                final_video_path = self._find_generated_video(topic)
+                if self.video_evaluator and final_video_path:
+                    quality_result = self._evaluate_and_fix_video_quality(
+                        topic, filepath, final_video_path, content
+                    )
+                    if quality_result:
+                        return quality_result
+                
                 return filepath
             else:
                 print(f"ERROR: Compilation failed (attempt {attempt}):")
@@ -920,6 +1005,16 @@ class EducationalScene(Scene):
                             print("SUCCESS: Animation created successfully after fallback!")
                             if stdout2:
                                 print("SUCCESS: Output:", stdout2[-300:])
+                            
+                            # Phase 3: Video Quality Evaluation (if enabled)
+                            final_video_path = self._find_generated_video(topic)
+                            if self.video_evaluator and final_video_path:
+                                quality_result = self._evaluate_and_fix_video_quality(
+                                    topic, filepath, final_video_path, content
+                                )
+                                if quality_result:
+                                    return quality_result
+                            
                             return filepath
                         else:
                             print("ERROR: Compilation still failed after fallback:")
@@ -930,6 +1025,206 @@ class EducationalScene(Scene):
         print(f" Debug info saved in: {content_path}")
         print(f" Last code version: {filepath}")
         return None
+    
+    def _find_generated_video(self, topic: str) -> Optional[str]:
+        """Find the generated MP4 video file for the topic."""
+        try:
+            # Manim saves videos in output/media/videos/ when run from project directory
+            topic_clean = topic.replace(' ', '_').lower()
+            possible_paths = [
+                f"output/media/videos/{topic_clean}_final/480p15/EducationalScene.mp4",
+                f"output/media/videos/EducationalScene/480p15/EducationalScene.mp4",
+                f"media/videos/{topic_clean}_final/480p15/EducationalScene.mp4",
+                f"media/videos/EducationalScene/480p15/EducationalScene.mp4"
+            ]
+            
+            for path in possible_paths:
+                if os.path.exists(path):
+                    print(f"Found generated video: {path}")
+                    return path
+            
+            # Try to find any MP4 in output/media and media directories
+            import glob
+            search_patterns = [
+                "output/media/videos/**/*.mp4",
+                "media/videos/**/*.mp4",
+                "output/**/*.mp4"
+            ]
+            
+            mp4_files = []
+            for pattern in search_patterns:
+                mp4_files.extend(glob.glob(pattern, recursive=True))
+            
+            if mp4_files:
+                # Return the most recently created MP4
+                latest_mp4 = max(mp4_files, key=os.path.getctime)
+                print(f"Found latest video: {latest_mp4}")
+                return latest_mp4
+            
+            print("WARNING: No generated video found")
+            return None
+            
+        except Exception as e:
+            print(f"ERROR: Error finding video: {e}")
+            return None
+    
+    def _evaluate_and_fix_video_quality(self, topic: str, code_filepath: str, 
+                                       video_path: str, content: Dict[str, Any]) -> Optional[str]:
+        """Evaluate video quality and apply fixes if needed."""
+        print("\n" + "=" * 70)
+        print("🎬 PHASE 3: VIDEO QUALITY EVALUATION")
+        print("=" * 70)
+        
+        for iteration in range(1, self.max_video_quality_iterations + 1):
+            print(f"\n🔍 Quality evaluation iteration {iteration}/{self.max_video_quality_iterations}")
+            
+            # Evaluate video with Gemini
+            evaluation_result = self.video_evaluator.evaluate_video(
+                video_path, 
+                content_context={'topic': topic}
+            )
+            
+            # Save evaluation feedback
+            feedback_filename = f"{topic.replace(' ', '_').lower()}_evaluation_{iteration}.yaml"
+            feedback_path = os.path.join(self.feedback_dir, feedback_filename)
+            self.video_evaluator.save_evaluation_feedback(evaluation_result, feedback_path)
+            
+            if evaluation_result['status'] == 'correct':
+                print("✅ VIDEO QUALITY APPROVED: No issues found!")
+                print(f"🏆 Final video ready: {video_path}")
+                return code_filepath
+            
+            elif evaluation_result['status'] == 'issue_found':
+                issues = evaluation_result.get('issues', [])
+                print(f"🚨 QUALITY ISSUES FOUND: {len(issues)} problems detected")
+                
+                for i, issue in enumerate(issues, 1):
+                    print(f"  Issue {i}: {issue.get('category', 'unknown')} - {issue.get('description', 'No description')}")
+                
+                if iteration < self.max_video_quality_iterations:
+                    print(f"\n🔧 Attempting to fix quality issues (iteration {iteration})...")
+                    
+                    # Apply quality fixes
+                    fix_success = self._apply_quality_fixes(code_filepath, evaluation_result, content)
+                    
+                    if fix_success:
+                        # Re-compile with fixes
+                        print("🔄 Re-compiling animation with quality fixes...")
+                        success, stdout, stderr = self.run_manim_code(code_filepath)
+                        
+                        if success:
+                            # Update video path for next iteration
+                            new_video_path = self._find_generated_video(topic)
+                            if new_video_path:
+                                video_path = new_video_path
+                                print("✅ Re-compilation successful, checking quality again...")
+                                continue
+                            else:
+                                print("❌ Video not found after re-compilation")
+                                break
+                        else:
+                            print(f"❌ Re-compilation failed: {stderr[-200:]}")
+                            break
+                    else:
+                        print("⚠️ Could not apply quality fixes automatically")
+                        break
+                else:
+                    print(f"\n⚠️ Maximum quality iterations ({self.max_video_quality_iterations}) reached")
+                    print("Proceeding with current version despite quality issues")
+                    break
+        
+        return code_filepath
+    
+    def _apply_quality_fixes(self, code_filepath: str, evaluation_result: Dict[str, Any], 
+                           content: Dict[str, Any]) -> bool:
+        """Apply fixes based on video quality evaluation feedback."""
+        try:
+            issues = evaluation_result.get('issues', [])
+            if not issues:
+                return False
+            
+            # Read current code
+            with open(code_filepath, 'r', encoding='utf-8') as f:
+                current_code = f.read()
+            
+            # Create detailed fix prompt for GPT-4
+            fix_prompt = self._create_quality_fix_prompt(issues, current_code, content)
+            
+            # Get fixed code from GPT-4
+            print("🤖 Generating quality fixes with GPT-4...")
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": fix_prompt}],
+                max_tokens=2500,
+                temperature=0.2
+            )
+            
+            fixed_code = response.choices[0].message.content.strip()
+            
+            # Clean the response
+            if "```python" in fixed_code:
+                fixed_code = re.search(r'```python\n(.*?)```', fixed_code, re.DOTALL).group(1)
+            elif "```" in fixed_code:
+                fixed_code = re.search(r'```\n(.*?)```', fixed_code, re.DOTALL).group(1)
+            
+            # Save fixed code
+            with open(code_filepath, 'w', encoding='utf-8') as f:
+                f.write(fixed_code)
+            
+            print("✅ Quality fixes applied to code")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error applying quality fixes: {e}")
+            return False
+    
+    def _create_quality_fix_prompt(self, issues: List[Dict[str, Any]], 
+                                 current_code: str, content: Dict[str, Any]) -> str:
+        """Create a targeted prompt for fixing video quality issues."""
+        issues_summary = "\n".join([
+            f"- {issue.get('category', 'unknown')}: {issue.get('description', 'No description')} "
+            f"(Severity: {issue.get('severity', 'unknown')}) "
+            f"Fix: {issue.get('suggested_fix', {}).get('specific_changes', 'No fix suggested')}"
+            for issue in issues
+        ])
+        
+        layout_rules = content.get('technical_specs', {}).get('layout_rules', {})
+        safe_margins = layout_rules.get('safe_area_margin', {'x': 0.7, 'y': 0.5})
+        min_gap = layout_rules.get('min_gap_between_objects', 0.6)
+        
+        prompt = f"""
+        Fix the following video quality issues in this Manim code:
+        
+        QUALITY ISSUES DETECTED:
+        {issues_summary}
+        
+        CURRENT CODE:
+        {current_code[:1500]}  # Truncated for context
+        
+        LAYOUT SAFETY REQUIREMENTS:
+        - Safe area margins: {safe_margins['x']} units from left/right, {safe_margins['y']} units from top/bottom
+        - Minimum gap between elements: {min_gap} units
+        - Use next_to(..., buff={min_gap}) for proper spacing
+        - Ensure all content stays within frame boundaries
+        - No overlapping text, shapes, or formulas
+        
+        INSTRUCTIONS:
+        1. Fix ALL reported quality issues
+        2. Maintain educational content and flow
+        3. Use safe positioning with proper margins
+        4. Ensure proper element spacing
+        5. Keep scene clearing between major sections
+        6. Use dynamic frame calculations:
+           fw = config.frame_width
+           fh = config.frame_height
+           safe_left = LEFT * (fw/2 - {safe_margins['x']})
+           safe_right = RIGHT * (fw/2 - {safe_margins['x']})
+           etc.
+        
+        Return the complete corrected Python code without any explanations.
+        """
+        
+        return prompt.strip()
 
 def main():
     """Main function with improved workflow."""
@@ -937,19 +1232,29 @@ def main():
     print("=====================================")
     print("Advanced shot-by-shot timeline approach")
     print("Prevents overlapping • Professional quality • 3Blue1Brown style")
+    print("🎬 Now with Gemini 2.5 Flash-Lite video quality evaluation!")
     
-    # Get API key
+    # Get OpenAI API key
     api_key = os.getenv('OPENAI_API_KEY')
     if not api_key:
         print("\n🔑 OpenAI API key needed")
         api_key = input("Enter your OpenAI API key: ")
     
     if not api_key:
-        print("ERROR: API key required")
+        print("ERROR: OpenAI API key required")
         return
     
+    # Get Gemini API key (optional)
+    gemini_key = os.getenv('GEMINI_API_KEY')
+    if not gemini_key:
+        print("\n🤖 Gemini API key (optional for video quality evaluation)")
+        gemini_key = input("Enter your Gemini API key (or press Enter to skip): ").strip()
+        if not gemini_key:
+            print("⚠️ Proceeding without video quality evaluation")
+            gemini_key = None
+    
     # Create generator
-    generator = FinalManimGenerator(api_key)
+    generator = FinalManimGenerator(api_key, gemini_key)
     
     while True:
         print("\n" + "="*70)

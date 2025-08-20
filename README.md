@@ -26,8 +26,11 @@ export OPENAI_API_KEY="your-api-key-here"
 
 ### **Usage**
 ```bash
-# Run the generator
+# Run the generator interactively
 python run.py
+
+# Or run the example script
+python example_usage.py
 
 # Enter topics when prompted:
 Topic: Integration
@@ -41,18 +44,20 @@ Topic: Fourier Transform
 manim-llm-generator/
 ├── src/
 │   ├── generator.py              # Main generator logic
+│   ├── video_evaluator.py        # Video quality evaluation
 │   ├── config/
 │   │   ├── content_schema.yaml   # Shot-by-shot template
-│   │   └── manim_api.yaml       # Manim API reference
+│   │   ├── manim_api.yaml        # Manim API reference
+│   │   ├── manim_parameter_fixes.yaml  # Common fixes
+│   │   └── video_evaluation_schema.yaml # Evaluation schema
 │   └── __init__.py
-├── examples/
-│   └── chemical_bonding.yaml    # Example content structure
-├── output/                      # Generated files (ignored by git)
+├── output/                      # Generated files (auto-created)
 │   ├── animations/              # Python animation files
 │   └── content/                 # YAML content structures
-├── media/                       # Manim video output (ignored by git)
+├── media/                       # Manim video output (auto-created)
 ├── requirements.txt
-├── run.py                       # Simple entry point
+├── run.py                       # Interactive entry point
+├── example_usage.py             # Programmatic usage example
 ├── .gitignore
 └── README.md
 ```

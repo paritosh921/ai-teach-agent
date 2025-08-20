@@ -16,36 +16,48 @@ from generator import FinalManimGenerator
 
 def main():
     """Clean entry point for the Manim LLM Generator."""
-    print("🎬 Manim LLM Generator")
+    print("Manim LLM Generator")
     print("=====================")
     print("Professional educational animations with AI")
     print()
     
     # Check if we're in the right directory
     if not os.path.exists('src/generator.py'):
-        print("❌ Error: Please run this script from the project root directory")
+        print("ERROR: Please run this script from the project root directory")
         print("   Current directory:", os.getcwd())
         return 1
     
-    # Get API key
+    # Get OpenAI API key
     api_key = os.getenv('OPENAI_API_KEY')
     if not api_key:
-        print("🔑 OpenAI API Key Required")
+        print("OpenAI API Key Required")
         api_key = input("Enter your OpenAI API key: ").strip()
     
     if not api_key:
-        print("❌ API key is required to proceed")
+        print("ERROR: OpenAI API key is required to proceed")
         return 1
+    
+    # Get Gemini API key (optional for video quality evaluation)
+    gemini_key = os.getenv('GEMINI_API_KEY')
+    if not gemini_key:
+        print("\nGemini API Key (Optional)")
+        print("For video quality evaluation with Gemini 2.5 Flash-Lite")
+        gemini_key = input("Enter your Gemini API key (or press Enter to skip): ").strip()
+        if gemini_key:
+            print("SUCCESS: Video quality evaluation enabled!")
+        else:
+            print("WARNING: Proceeding without video quality evaluation")
+            gemini_key = None
     
     # Create generator instance
     try:
-        generator = FinalManimGenerator(api_key)
+        generator = FinalManimGenerator(api_key, gemini_key)
     except Exception as e:
-        print(f"❌ Failed to initialize generator: {e}")
+        print(f"ERROR: Failed to initialize generator: {e}")
         return 1
     
     # Main interaction loop
-    print("\n🎯 Ready to create animations!")
+    print("\nReady to create animations!")
     print("Type 'quit' to exit, or enter a topic to generate an animation.")
     print()
     
@@ -58,31 +70,31 @@ def main():
                 break
             
             if not topic:
-                print("⚠️ Please enter a topic")
+                print("WARNING: Please enter a topic")
                 continue
             
             # Generate animation
-            print(f"\n🚀 Creating animation for: '{topic}'")
+            print(f"\nCreating animation for: '{topic}'")
             print("-" * 50)
             
             result = generator.create_animation(topic)
             
             if result:
-                print(f"\n✅ Success! Animation created: {result}")
-                print("🎥 Check the output/animations/ directory")
-                print("📋 Content structure saved in output/content/")
+                print(f"\nSUCCESS: Animation created: {result}")
+                print("Check the output/animations/ directory")
+                print("Content structure saved in output/content/")
             else:
-                print("\n❌ Failed to create animation")
-                print("🔍 Check output files for debugging information")
+                print("\nERROR: Failed to create animation")
+                print("Check output files for debugging information")
             
             print("\n" + "=" * 50)
             
         except KeyboardInterrupt:
-            print("\n👋 Interrupted by user. Goodbye!")
+            print("\nInterrupted by user. Goodbye!")
             break
         except Exception as e:
-            print(f"\n❌ Unexpected error: {e}")
-            print("🔄 You can try again with a different topic")
+            print(f"\nERROR: Unexpected error: {e}")
+            print("You can try again with a different topic")
 
 if __name__ == "__main__":
     sys.exit(main())

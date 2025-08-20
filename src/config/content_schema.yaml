@@ -77,16 +77,16 @@ animation:
           focus: "center"
           zoom_level: 1.0
           
-      - shot_id: "intro_02" 
+      - shot_id: "hook_01" 
         start_time: 5
-        end_time: 12
-        description: "Hook question with visual"
+        end_time: 15
+        description: "Hook question with specific example"
         scene_state: "clean"  # previous elements cleared
         
         elements:
-          - element_id: "hook_text"
+          - element_id: "hook_question"
             type: "text"
-            content: "What makes atoms stick together?"
+            content: "How do we find the area under y = x²?"
             position: "top"
             layer: 2
             style:
@@ -95,24 +95,62 @@ animation:
             animation:
               entry: "fade_in"
               entry_duration: 1
-              stay_duration: 5
+              stay_duration: 8
               exit: "fade_out" 
               exit_duration: 1
               
-          - element_id: "atom_visual"
-            type: "shape"
-            content: "atom_diagram"  # specific shape/diagram identifier
+          - element_id: "function_graph"
+            type: "graph"
+            content: "y = x²"  # specific mathematical function
             position: "center"
             layer: 1
             style:
-              color: "YELLOW"
-              radius: 2
+              color: "BLUE"
+              x_range: "[-2, 2]"
+              y_range: "[0, 4]"
             animation:
-              entry: "scale_in"
-              entry_duration: 1.5
-              stay_duration: 4
-              exit: "scale_out"
-              exit_duration: 1.5
+              entry: "create"
+              entry_duration: 2
+              stay_duration: 6
+              exit: "fade_out"
+              exit_duration: 1
+              
+      - shot_id: "definition_01"
+        start_time: 15
+        end_time: 25  
+        description: "Formal definition with formula"
+        scene_state: "clean"
+        
+        elements:
+          - element_id: "definition_text"
+            type: "text" 
+            content: "Integration: Finding area under curves"
+            position: "top"
+            layer: 2
+            style:
+              color: "GREEN"
+              font_size: 42
+            animation:
+              entry: "write"
+              entry_duration: 2
+              stay_duration: 6
+              exit: "fade_out"
+              exit_duration: 2
+              
+          - element_id: "integral_formula"
+            type: "formula"
+            content: "∫₀² x² dx = [x³/3]₀² = 8/3"
+            position: "center"
+            layer: 2
+            style:
+              color: "YELLOW"
+              font_size: 36
+            animation:
+              entry: "write"
+              entry_duration: 3
+              stay_duration: 5
+              exit: "fade_out"
+              exit_duration: 2
               
   # Detailed content sections with precise specifications
   content_sections:
@@ -239,17 +277,17 @@ technical_specs:
     slide_in: "DrawBorderThenFill"
     create: "Create"
     
-  # Positioning system
+  # Positioning system - Content regions for educational layout
   positioning:
     center: "ORIGIN"
-    top: "UP * 2.8"           # use safe-area-adjusted positions
-    bottom: "DOWN * 2.8"
-    left: "LEFT * 5.5"
-    right: "RIGHT * 5.5" 
-    top_left: "UP * 2.2 + LEFT * 4.5"
-    top_right: "UP * 2.2 + RIGHT * 4.5"
-    bottom_left: "DOWN * 2.2 + LEFT * 4.5"
-    bottom_right: "DOWN * 2.2 + RIGHT * 4.5"
+    top: "UP * 2.5"           # For titles and headers
+    bottom: "DOWN * 2.5"      # For conclusions and summaries
+    left: "LEFT * 4"          # For side content
+    right: "RIGHT * 4"        # For side content
+    top_left: "UP * 2.5 + LEFT * 4"
+    top_right: "UP * 2.5 + RIGHT * 4"
+    bottom_left: "DOWN * 2.5 + LEFT * 4"
+    bottom_right: "DOWN * 2.5 + RIGHT * 4"
 
     # Layout safety rules for generation
     layout_rules:

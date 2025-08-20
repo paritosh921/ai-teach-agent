@@ -74,8 +74,24 @@ parameter_fixes:
       wrong: 'Rectangle(size=3)'
       correct: 'Rectangle(width=3, height=2)'
 
+# Axes object corrections
+  Axes:
+    deprecated_methods:
+      - "get_graph"  # Use plot() instead
+    method_replacements:
+      "get_graph": "plot"
+    invalid_params_in_plot:
+      - "color"  # Set color separately with .set_color()
+    examples:
+      wrong: 'axes.get_graph(lambda x: x**2, color=BLUE)'
+      correct: 'graph = axes.plot(lambda x: x**2); graph.set_color(BLUE)'
+      
 # Common error patterns and fixes
 error_patterns:
+  get_graph_color_error:
+    pattern: "axes\\.get_graph\\(.*?,\\s*color="
+    replacement: "SPLIT_AND_FIX"
+    description: "Split get_graph with color into plot() + set_color()"
   "unexpected keyword argument 'size'":
     description: "Using 'size' parameter which doesn't exist in many Manim objects"
     fix_strategy: "Replace with appropriate parameter or remove"
