@@ -85,6 +85,16 @@ parameter_fixes:
     examples:
       wrong: 'axes.get_graph(lambda x: x**2, color=BLUE)'
       correct: 'graph = axes.plot(lambda x: x**2); graph.set_color(BLUE)'
+
+  # Function graph corrections
+  FunctionGraph:
+    invalid_params:
+      - "color"  # Set color separately with .set_color()
+    deprecated_constructors:
+      - "get_graph"  # Use Axes.plot() instead
+    examples:
+      wrong: 'axes.get_graph(lambda x: x**2, color=BLUE)'
+      correct: 'graph = axes.plot(lambda x: x**2).set_color(BLUE)'
       
 # Common error patterns and fixes
 error_patterns:
@@ -92,6 +102,16 @@ error_patterns:
     pattern: "axes\\.get_graph\\(.*?,\\s*color="
     replacement: "SPLIT_AND_FIX"
     description: "Split get_graph with color into plot() + set_color()"
+  
+  get_graph_any_color_error:
+    pattern: "(\\w+)\\.get_graph\\(([^,)]+),\\s*color=([^,)]+)\\)"
+    replacement: "\\1_graph = \\1.plot(\\2)\\n        \\1_graph.set_color(\\3)"
+    description: "Replace any get_graph with color parameter"
+    
+  get_tangent_line_color_error:
+    pattern: "(\\w+)\\.get_tangent_line\\(([^,)]+),\\s*([^,)]+),\\s*color=([^,)]+)\\)"
+    replacement: "\\1_tangent = \\1.get_tangent_line(\\2, \\3)\\n        \\1_tangent.set_color(\\4)"
+    description: "Fix get_tangent_line with color parameter"
   "unexpected keyword argument 'size'":
     description: "Using 'size' parameter which doesn't exist in many Manim objects"
     fix_strategy: "Replace with appropriate parameter or remove"

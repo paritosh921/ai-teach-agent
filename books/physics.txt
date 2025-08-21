@@ -1,0 +1,140 @@
+# Introduction to Physics
+
+## Chapter 1: Motion in One Dimension
+
+### Section 1.1: Position, Velocity, and Acceleration
+
+Motion is fundamental to physics. We describe motion using three key concepts:
+
+**Position (x)**: The location of an object relative to a reference point. Position can be positive or negative depending on the chosen coordinate system.
+
+**Velocity (v)**: The rate of change of position with respect to time. Average velocity is defined as:
+v_avg = Δx/Δt = (x₂ - x₁)/(t₂ - t₁)
+
+Instantaneous velocity is the limit as Δt approaches zero:
+v = dx/dt
+
+**Acceleration (a)**: The rate of change of velocity with respect to time:
+a_avg = Δv/Δt = (v₂ - v₁)/(t₂ - t₁)
+
+Instantaneous acceleration:
+a = dv/dt = d²x/dt²
+
+### Section 1.2: Kinematic Equations
+
+For motion with constant acceleration, we have five kinematic equations:
+
+1. v = v₀ + at
+2. x = x₀ + v₀t + ½at²
+3. v² = v₀² + 2a(x - x₀)
+4. x = x₀ + ½(v₀ + v)t
+5. x = x₀ + vt - ½at²
+
+Where:
+- x₀ = initial position
+- v₀ = initial velocity  
+- v = final velocity
+- a = acceleration (constant)
+- t = time
+
+### Section 1.3: Free Fall
+
+Free fall is a special case of motion with constant acceleration where a = -g = -9.8 m/s² (on Earth).
+
+Key characteristics:
+- All objects fall at the same rate (ignoring air resistance)
+- Velocity increases linearly with time
+- Distance fallen increases quadratically with time
+
+For an object dropped from rest at height h:
+- Time to fall: t = √(2h/g)
+- Final velocity: v = √(2gh)
+
+## Chapter 2: Forces and Newton's Laws
+
+### Section 2.1: Newton's First Law (Law of Inertia)
+
+An object at rest stays at rest, and an object in motion stays in motion at constant velocity, unless acted upon by a net external force.
+
+This law defines inertia - the tendency of objects to resist changes in their motion. It also establishes the concept of inertial reference frames.
+
+### Section 2.2: Newton's Second Law
+
+The acceleration of an object is directly proportional to the net force acting on it and inversely proportional to its mass:
+
+F_net = ma
+
+This is the most important equation in classical mechanics. It tells us:
+- Greater force produces greater acceleration
+- Greater mass produces less acceleration for the same force
+- Force and acceleration are vector quantities (same direction)
+
+### Section 2.3: Newton's Third Law
+
+For every action, there is an equal and opposite reaction.
+
+More precisely: If object A exerts a force F_AB on object B, then object B exerts a force F_BA on object A, where F_BA = -F_AB.
+
+Important notes:
+- Action-reaction pairs act on different objects
+- They are equal in magnitude and opposite in direction
+- They occur simultaneously
+
+### Section 2.4: Common Forces
+
+**Weight**: W = mg (always points downward)
+
+**Normal Force**: Perpendicular contact force from a surface
+
+**Friction**: 
+- Static friction: f_s ≤ μ_s N
+- Kinetic friction: f_k = μ_k N
+
+**Tension**: Force transmitted through a string or rope
+
+**Applied Force**: Any external force applied to an object
+
+## Chapter 3: Energy and Work
+
+### Section 3.1: Work
+
+Work is done when a force causes displacement:
+
+W = F⋅d = Fd cos θ
+
+Where θ is the angle between the force and displacement vectors.
+
+Key points:
+- Work is a scalar quantity
+- Units: Joules (J) = N⋅m
+- Work can be positive, negative, or zero
+- Only the component of force in the direction of motion does work
+
+### Section 3.2: Kinetic Energy
+
+Kinetic energy is the energy of motion:
+
+KE = ½mv²
+
+The work-energy theorem states:
+W_net = ΔKE = KE_f - KE_i
+
+This powerful theorem connects force and motion through energy concepts.
+
+### Section 3.3: Potential Energy
+
+Potential energy is stored energy due to position or configuration.
+
+**Gravitational Potential Energy**: PE_g = mgh
+(measured from a reference level)
+
+**Elastic Potential Energy**: PE_s = ½kx²
+(for a spring with spring constant k compressed or stretched by distance x)
+
+### Section 3.4: Conservation of Energy
+
+In the absence of non-conservative forces (like friction), mechanical energy is conserved:
+
+E = KE + PE = constant
+
+This principle allows us to solve many problems without considering forces directly, making it a powerful problem-solving tool.
