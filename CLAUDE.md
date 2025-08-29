@@ -4,7 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-**Book-to-Video System (Primary Interface):**
+**🆕 Enhanced AI-Powered Video System (Recommended):**
+```bash
+# Generate optimal 10-minute video segments with full AI pipeline
+python enhanced_book_to_video.py --book "calculus" --section "1.1" --audience "high_school"
+
+# Generate entire chapter with autonomous debugging
+python enhanced_book_to_video.py --book "physics" --chapter 2 --quality-threshold 0.8
+
+# Interactive mode with enhanced features
+python enhanced_book_to_video.py --book "calculus" --interactive --enhanced
+
+# Generate from custom content with AI agent
+python enhanced_book_to_video.py --content "Your educational content here" --topic "Custom Topic"
+
+# Show enhanced system status
+python enhanced_book_to_video.py --status
+
+# List available books
+python enhanced_book_to_video.py --list-books
+```
+
+**Book-to-Video System (Original Interface):**
 ```bash
 # List available books
 python book_to_video.py --list-books
@@ -33,6 +54,10 @@ python builder_run.py --topic "Chemical Bonding" --interactive
 
 **Install dependencies:**
 ```bash
+# Enhanced system with AI capabilities
+pip install -r requirements_enhanced.txt
+
+# Original system (basic)
 pip install -r requirements.txt
 ```
 
@@ -50,7 +75,15 @@ python builder_run.py --topic "Basic Math" --interactive
 
 **Environment variables:**
 - `OPENAI_API_KEY` - Required for GPT-4 content generation
+- `OPENAI_MODEL` - Optional OpenAI model selection (defaults to gpt-5-mini)
 - `GEMINI_API_KEY` - Optional for video quality evaluation with Gemini 1.5 Flash
+
+**OpenAI Model Compatibility:**
+- `gpt-5-mini` (default): No temperature parameter support, reasoning-optimized
+- `gpt-4-turbo`: Full parameter support including temperature
+- `gpt-4o`: Full parameter support including temperature  
+- `gpt-4`: Full parameter support including temperature
+- System automatically falls back to compatible models on parameter errors
 
 **Important Notes:**
 - The Gemini API has been updated to use `google-generativeai` package and Gemini 1.5 Flash model
@@ -70,7 +103,59 @@ media/videos/           # Manim video output
 
 ## High-Level Architecture
 
-This repository contains **a comprehensive book-to-video educational system** with multiple processing layers:
+This repository contains **a comprehensive AI-powered tutorial video pipeline** with advanced autonomous capabilities:
+
+### 🆕 Enhanced AI-Powered System (Latest)
+**AUTONOMOUS-AGENT-PIPELINE**: Complete autonomous video generation with learning capabilities
+- **Workflow**: TEXT → SUBDIVISION → AI-AGENT → DEBUG-LOOP → EVALUATION → QUALITY-CHECK → VIDEO
+- **Components**: `enhanced_book_to_video.py`, `src/enhanced_orchestrator.py`, `src/ai_agent.py`
+- **Key Features**: Autonomous debugging, frame-by-frame analysis, 10-minute optimization, scene continuity
+- **Input**: Textbook content, custom text, or structured educational material
+- **Output**: Professional educational video series with comprehensive quality reports
+
+### 🎯 AI Agent System (Core Innovation)
+**AUTONOMOUS-CODE-GENERATION**: Self-debugging AI agent with memory and learning
+- **Capabilities**: Generates Manim code, debugs compilation errors autonomously, learns from failures
+- **Components**: `src/ai_agent.py`, `src/position_mapper.py`, `src/content_reflow.py`
+- **Memory System**: Persistent learning database that improves over time
+- **Error Recovery**: 5-level progressive error fixing with fallback strategies
+
+### 🔍 Enhanced Video Evaluation (Gemini Integration)
+**FRAME-BY-FRAME-ANALYSIS**: Comprehensive video quality assessment
+- **Technology**: Gemini 1.5 Flash integration with OpenCV frame extraction
+- **Analysis**: Content overlap detection, out-of-frame elements, educational effectiveness
+- **Components**: `src/simple_video_evaluator.py` (enhanced version)
+- **Output**: Detailed quality reports with actionable recommendations
+
+### 📐 Position Mapping & Layout System
+**INTELLIGENT-LAYOUT-MANAGEMENT**: Advanced collision detection and resolution
+- **Features**: Element tracking across time, overlap prevention, automatic reflow
+- **Components**: `src/position_mapper.py`, `src/layout/safe_layout_manager.py`
+- **Algorithms**: Dynamic programming for optimal positioning, multi-strategy conflict resolution
+
+### 🎬 Content Subdivision System  
+**OPTIMAL-10MIN-SEGMENTATION**: Smart content breaking with part numbering
+- **Algorithm**: Natural boundary detection, complexity analysis, duration optimization
+- **Component**: `src/topic_subdivider.py` (enhanced with 10-minute optimization)
+- **Output**: Intelligently named parts (e.g., "Limits - Part 1: Theory", "Limits - Part 2: Applications")
+
+### 🔄 Content Reflow System
+**SCENE-CONTINUITY-MANAGEMENT**: Element persistence and intelligent transitions
+- **Features**: Cross-scene element tracking, automatic content reflow, priority-based element management
+- **Component**: `src/content_reflow.py`
+- **Strategies**: Scale-down, redistribute, paginate, stack-vertical, prioritize
+
+### 📊 Comprehensive Reporting System
+**DETAILED-ANALYTICS**: Complete pipeline performance analysis
+- **Reports**: Agent performance, quality scores, layout analysis, reflow operations
+- **Storage**: JSON reports with timestamps, searchable analysis data
+- **Insights**: Learning patterns, common errors, optimization recommendations
+
+---
+
+### Legacy System Components
+
+This repository also contains **the original book-to-video educational system** for compatibility:
 
 ### 🆕 Book-to-Video System (Primary Interface)
 **TEXTBOOK-TO-MANIM**: Complete workflow from textbook content to educational videos

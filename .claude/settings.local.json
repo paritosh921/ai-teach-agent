@@ -12,7 +12,11 @@
       "WebFetch(domain:microsoft.github.io)",
       "Bash(rm:*)",
       "Bash(dir:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout:*)",
+      "Bash(sed:*)",
+      "Bash(chmod:*)",
+      "Bash(chcp:*)"
     ],
     "deny": [],
     "ask": []

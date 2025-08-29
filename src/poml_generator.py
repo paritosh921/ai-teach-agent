@@ -204,7 +204,7 @@ YAML STRUCTURE REQUIREMENTS:
   </task>
   
   <content source="book_section" title="{section.title}" section_number="{section.section_number}">
-    {self._escape_xml_content(section.content[:500])}...
+{self._format_detailed_content(section)}
   </content>
   
   <educational-context>
@@ -272,7 +272,20 @@ YAML STRUCTURE REQUIREMENTS:
         if subject == 'math':
             if section.educational_elements.get('formulas'):
                 elements.append('      <mathtex position="center" style="formula">Key mathematical expressions</mathtex>')
-            elements.append('      <axes position="center_right" style="coordinate_system"/>')
+            # Add axes with appropriate function based on content
+            content_lower = section.content.lower()
+            if "derivative" in section.title.lower() or "derivative" in content_lower:
+                # For derivative topics, use a function that shows clear derivative behavior
+                elements.append('      <axes position="center_right" style="coordinate_system" fn="lambda x: x**2"/>')
+            elif "sine" in content_lower or "sin" in content_lower or "trigonometric" in content_lower:
+                elements.append('      <axes position="center_right" style="coordinate_system" fn="lambda x: np.sin(x)"/>')
+            elif "exponential" in content_lower or "exp" in content_lower:
+                elements.append('      <axes position="center_right" style="coordinate_system" fn="lambda x: np.exp(x/2)"/>')
+            elif "linear" in content_lower or "line" in content_lower:
+                elements.append('      <axes position="center_right" style="coordinate_system" fn="lambda x: 2*x + 1"/>')
+            else:
+                # Default to a simple quadratic function
+                elements.append('      <axes position="center_right" style="coordinate_system" fn="lambda x: x**2"/>')
             
         elif subject == 'physics':
             elements.append('      <diagram position="center" style="physics_scenario"/>')
@@ -331,6 +344,39 @@ YAML STRUCTURE REQUIREMENTS:
         
         content += "  </mathematical-content>\n"
         return content
+    
+    def _format_detailed_content(self, section: TextSection) -> str:
+        """Format detailed content from section for comprehensive POML"""
+        if not section.content:
+            return "    Content not found - check section loading"
+        
+        # Start with the main content
+        formatted_lines = []
+        formatted_lines.append("    <!-- FULL EDUCATIONAL CONTENT -->")
+        
+        # Split content into logical sections and format them
+        content_lines = section.content.split('\n')
+        for line in content_lines:
+            if line.strip():
+                # Escape XML and add proper indentation
+                escaped_line = self._escape_xml_content(line)
+                formatted_lines.append(f"    {escaped_line}")
+            else:
+                formatted_lines.append("")  # Preserve blank lines
+        
+        # Add educational elements summary
+        if section.educational_elements:
+            formatted_lines.append("")
+            formatted_lines.append("    <!-- EXTRACTED EDUCATIONAL ELEMENTS -->")
+            
+            for element_type, elements in section.educational_elements.items():
+                if elements:
+                    formatted_lines.append(f"    <!-- {element_type.upper()}: -->")
+                    for element in elements[:5]:  # Limit to first 5 of each type
+                        escaped_element = self._escape_xml_content(element)
+                        formatted_lines.append(f"    <!-- - {escaped_element} -->")
+        
+        return '\n'.join(formatted_lines)
     
     def _escape_xml_content(self, content: str) -> str:
         """Escape XML special characters in content"""

@@ -471,31 +471,43 @@ def no_overlap(min_spacing: float = 0.3):
 
 # End Safety Utilities
 
-class EducationalScene(SafeScene):
+class Video(SafeScene):
     def construct(self):
-        # Scene 1: Introduction
-        title = Text("Understanding Limits", font_size=48)
-        self.play(FadeIn(title))
-        self.wait(10)
-        self.play(FadeOut(title))
-        # Scene 2: Function Example
-        function = MathTex("f(x) = x^2")
-        self.play(FadeIn(function))
-        self.wait(10)
-        self.play(FadeOut(function))
-        # Scene 3: Mathematical Development
-        limit = MathTex("\\lim_{x\\to2} x^2 = 4")
-        self.play(FadeIn(limit))
-        self.wait(10)
-        self.play(FadeOut(limit))
-        # Scene 4: Visual Demonstration
-        axes = Axes((-3, 3, 1), (-1, 9, 1))
-        graph = axes.plot(lambda x: x**2, color=BLUE)
-        self.play(FadeIn(axes), FadeIn(graph))
-        self.wait(10)
-        self.play(FadeOut(axes), FadeOut(graph))
-        # Scene 5: Key Insights
-        insight = Text("What value does f(x) get arbitrarily close to as x gets arbitrarily close to some number a?")
-        self.play(FadeIn(insight))
-        self.wait(5)
-        self.play(FadeOut(insight))
+        # Scene 1: Understanding Limits
+        limit_intro = Text("Understanding Limits", font_size=48).to_edge(UP)
+        self.play(Write(limit_intro))
+        limit_definition = Text("As x approaches 2, f(x) approaches 4.", font_size=36).next_to(limit_intro, DOWN)
+        self.play(FadeIn(limit_definition))
+        limit_example = MathTex(r"\lim_{x \to 2} x^2 = 4", font_size=36).next_to(limit_definition, DOWN)
+        self.play(Write(limit_example))
+        self.wait(2)
+        # Scene 2: Formal Definition
+        self.play(FadeOut(limit_intro), FadeOut(limit_definition), FadeOut(limit_example))
+        epsilon_delta = Text("Epsilon-Delta Definition", font_size=48).to_edge(UP)
+        self.play(Write(epsilon_delta))
+        epsilon_delta_explanation = Text("What value does f(x) get arbitrarily close to as x approaches a?", font_size=36).next_to(epsilon_delta, DOWN)
+        self.play(FadeIn(epsilon_delta_explanation))
+        self.wait(2)
+        # Scene 3: Limit Laws
+        self.play(FadeOut(epsilon_delta), FadeOut(epsilon_delta_explanation))
+        limit_laws_intro = Text("Limit Laws", font_size=48).to_edge(UP)
+        self.play(Write(limit_laws_intro))
+        limit_laws_explanation = Text("These rules simplify complex limit problems.", font_size=36).next_to(limit_laws_intro, DOWN)
+        self.play(FadeIn(limit_laws_explanation))
+        self.wait(2)
+        # Scene 4: Quotient Rule
+        self.play(FadeOut(limit_laws_intro), FadeOut(limit_laws_explanation))
+        quotient_rule_title = Text("Quotient Rule", font_size=48).to_edge(UP)
+        self.play(Write(quotient_rule_title))
+        quotient_rule_formula = MathTex(r"\lim_{x \to a} \frac{f(x)}{g(x)} = \frac{\lim_{x \to a} f(x)}{\lim_{x \to a} g(x)}", font_size=36).next_to(quotient_rule_title, DOWN)
+        self.play(Write(quotient_rule_formula))
+        quotient_rule_condition = Text(r"provided \lim_{x \to a} g(x) \neq 0", font_size=36).next_to(quotient_rule_formula, DOWN)
+        self.play(FadeIn(quotient_rule_condition))
+        self.wait(2)
+        # Scene 5: Derivatives
+        self.play(FadeOut(quotient_rule_title), FadeOut(quotient_rule_formula), FadeOut(quotient_rule_condition))
+        derivatives_intro = Text("Derivatives", font_size=48).to_edge(UP)
+        self.play(Write(derivatives_intro))
+        derivatives_explanation = Text("Derivatives describe the rate of change of a function.", font_size=36).next_to(derivatives_intro, DOWN)
+        self.play(FadeIn(derivatives_explanation))
+        self.wait(2)

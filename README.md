@@ -4,60 +4,113 @@ Professional educational animation generator that creates 3Blue1Brown-style vide
 
 ## ✨ **Features**
 
-- 🧠 **AI-Powered Content Creation** - GPT-4 generates educational content structure  
+- 🧠 **AI-Powered Content Creation** - GPT-4 generates educational content structure
 - 🎯 **Shot-by-Shot Precision** - Film-quality timeline prevents overlapping visuals
 - 🔧 **Smart Error Fixing** - Automatic code repair with focused context
 - 🎨 **Professional Quality** - 3Blue1Brown educational standards
 - 📚 **Wide Topics** - Mathematics, Physics, Chemistry, Computer Science
+- 🚀 **LLM-Powered Text Processing** - Intelligently processes ANY text format
+- 🎭 **Format Agnostic** - Works with academic papers, lecture notes, blog posts, etc.
+- 📊 **Smart Content Extraction** - Automatically identifies concepts, formulas, and visuals
 
 ## 🚀 **Quick Start**
 
 ### **Installation**
 ```bash
-# Clone or download this project
-cd manim-llm-generator
+# Navigate to the project directory
+cd "path/to/manim-llm-generator"
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Set your OpenAI API key (optional - will prompt if not set)
-export OPENAI_API_KEY="your-api-key-here"
+# Copy environment template and set your API keys
+cp env_template.txt .env
+# Edit .env file with your API keys
 ```
+
+### **Setup API Keys**
+1. Copy `env_template.txt` to `.env`
+2. Edit `.env` and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your-openai-api-key-here
+   GEMINI_API_KEY=your-gemini-api-key-here  # Optional
+   ```
 
 ### **Usage**
 ```bash
-# Run the generator interactively
-python run.py
+# Test that everything is working
+python test_simple_generation.py
 
-# Or run the example script
-python example_usage.py
+# Generate video from book content
+python book_to_video.py --book "calculus" --section "1.1"
 
-# Enter topics when prompted:
-Topic: Integration
-Topic: Chemical Bonding
-Topic: Fourier Transform
+# Generate entire chapter with enhanced features
+python enhanced_book_to_video.py --book "physics" --chapter 2
+
+# List available books
+python book_to_video.py --list-books
+
+# Interactive mode
+python enhanced_book_to_video.py --book "calculus" --interactive
+
+# Test LLM-powered processing capabilities
+python demo_llm_book_processor.py
+
+# Full LLM processing test (requires API key)
+python test_llm_book_processor.py
 ```
+
+## 🧠 **LLM-Powered Text Processing**
+
+The system now uses advanced AI to intelligently process **any text format**, eliminating the need for rigid structure requirements.
+
+### **What It Can Process**
+- ✅ **Academic Papers**: "In this paper, we demonstrate..."
+- ✅ **Lecture Notes**: "Today we'll cover: 1. Topic A 2. Topic B"
+- ✅ **Blog Posts**: "Let me explain this concept..."
+- ✅ **Textbooks**: Traditional structured format
+- ✅ **Mixed Formats**: Combination of different styles
+- ✅ **Handwritten Notes**: Scanned or transcribed content
+
+### **Intelligent Extraction**
+- 🎯 **Automatic Section Detection** - Identifies chapters and subsections
+- 💡 **Concept Recognition** - Finds key educational concepts
+- 📐 **Formula Detection** - Extracts mathematical expressions
+- 👁️ **Visual Suggestions** - Recommends animations and diagrams
+- 📊 **Difficulty Assessment** - Gauges content complexity
+- 🎯 **Learning Objectives** - Generates pedagogical goals
+
+### **Example**
+**Input**: Any educational text in any format
+**Output**: Structured content ready for video generation
 
 ## 📁 **Project Structure**
 
 ```
 manim-llm-generator/
 ├── src/
-│   ├── generator.py              # Main generator logic
-│   ├── video_evaluator.py        # Video quality evaluation
+│   ├── llm_book_processor.py     # LLM-powered text processing
+│   ├── llm_book_adapter.py       # Backward compatibility adapter
+│   ├── book_processor.py         # Traditional text processor
+│   ├── enhanced_orchestrator.py  # Enhanced video generation
+│   ├── orchestrator.py           # Main video orchestrator
+│   ├── builder_llm.py            # AI content generation
+│   ├── poml_generator.py         # Content structure generation
 │   ├── config/
 │   │   ├── content_schema.yaml   # Shot-by-shot template
 │   │   ├── manim_api.yaml        # Manim API reference
 │   │   ├── manim_parameter_fixes.yaml  # Common fixes
 │   │   └── video_evaluation_schema.yaml # Evaluation schema
-│   └── __init__.py
-├── output/                      # Generated files (auto-created)
-│   ├── animations/              # Python animation files
-│   └── content/                 # YAML content structures
-├── media/                       # Manim video output (auto-created)
+│   └── autolayout/               # Layout management
+├── books/                        # Educational content files
+├── cache/                        # LLM-processed content cache
+├── output/                       # Generated files (auto-created)
+├── media/                        # Manim video output (auto-created)
 ├── requirements.txt
-├── run.py                       # Interactive entry point
-├── example_usage.py             # Programmatic usage example
+├── enhanced_book_to_video.py     # Enhanced generation script
+├── book_to_video.py              # Basic generation script
+├── demo_llm_book_processor.py    # LLM capabilities demo
+├── test_llm_book_processor.py    # Full LLM processor test
 ├── .gitignore
 └── README.md
 ```

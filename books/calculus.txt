@@ -1,8 +1,7 @@
 # Introduction to Calculus
 
 ## Chapter 1: Limits and Continuity
-
-### Section 1.1: Understanding Limits
+Understanding Limits
 
 The concept of a limit is fundamental to calculus. A limit describes the behavior of a function as its input approaches a particular value. 
 
@@ -12,7 +11,7 @@ lim(x→2) x² = 4
 
 The formal definition uses epsilon-delta notation, but intuitively, we're asking: "What value does f(x) get arbitrarily close to as x gets arbitrarily close to some number a?"
 
-### Section 1.2: Limit Laws
+Section 1.2: Limit Laws
 
 Limits follow several important rules:
 1. Sum Rule: lim(x→a) [f(x) + g(x)] = lim(x→a) f(x) + lim(x→a) g(x)
@@ -21,24 +20,96 @@ Limits follow several important rules:
 
 These rules allow us to break down complex limit problems into simpler parts.
 
-## Chapter 2: Derivatives
+Chapter 2: Derivatives
 
-### Section 2.1: The Derivative as a Limit
+ Section 2.1: The Derivative as a Limit
 
-The derivative represents the instantaneous rate of change of a function. It's defined as:
+# Introduction: What is a Derivative?
 
-f'(x) = lim(h→0) [f(x+h) - f(x)] / h
+The derivative is a fundamental concept in calculus.
 
-Geometrically, this represents the slope of the tangent line to the curve at point x.
+At its core, it measures how a function changes as its input changes.
+In real life, it often represents speed, growth rate, or the slope of a curve at a specific point.
 
-For example, if f(x) = x², then:
-f'(x) = lim(h→0) [(x+h)² - x²] / h
-      = lim(h→0) [x² + 2xh + h² - x²] / h
-      = lim(h→0) [2xh + h²] / h
-      = lim(h→0) [2x + h]
-      = 2x
+Example intuition:
+The speedometer in a car shows how fast the position is changing right now - that is an instantaneous rate of change, i.e., a derivative.
 
-### Section 2.2: Power Rule
+ Definition (Formal Limit Form)
+
+The derivative of a function f(x) at a point x is defined as:
+
+f'(x) = lim(h→0) [f(x+h) - f(x)]/h
+
+Here:
+- h is a very small change in x
+- The fraction represents average rate of change over the interval [x, x+h]
+- The limit as h approaches 0 gives us the instantaneous rate of change
+## Geometrical Meaning
+
+On a graph of y = f(x):
+- The average rate of change is the slope of a secant line through two points
+- The derivative is the slope of the tangent line at a single point
+
+So:
+f'(x) = Slope of the tangent line at point (x, f(x))
+
+## Worked Example
+
+Let's compute the derivative of f(x) = x².
+
+f'(x) = lim(h→0) [(x+h)² - x²]/h
+
+Step by step:
+= lim(h→0) [x² + 2xh + h² - x²]/h
+= lim(h→0) [2xh + h²]/h
+= lim(h→0) (2x + h)
+= 2x
+
+So, f'(x) = 2x.
+This means the slope of y = x² at any point x is 2x.
+
+# Interpretation with Numbers
+
+If f(x) = x²:
+- At x = 1, f'(1) = 2 (Slope is 2)
+- At x = 2, f'(2) = 4 (Slope is 4)
+- At x = 0, f'(0) = 0 (Tangent is flat)
+
+This shows how steepness changes along the curve.
+
+## Basic Derivative Rules (from the limit definition)
+
+From repeated calculations like above, we can generalize:
+
+1. Power Rule:
+   d/dx(x^n) = nx^(n-1)
+
+2. Constant Rule:
+   d/dx(c) = 0
+
+3. Constant Multiple Rule:
+   d/dx(c·f(x)) = c·f'(x)
+
+4. Sum Rule:
+   d/dx(f(x) + g(x)) = f'(x) + g'(x)
+
+## Advanced Insights
+
+Derivatives are not only slopes - they appear in physics (velocity, acceleration), economics (marginal cost/profit), biology (growth rate), and more.
+
+Higher-order derivatives exist:
+- f''(x): slope of the slope (acceleration in physics)
+- f^(n)(x): the nth derivative
+
+ Summary for Students
+
+- The derivative is the instantaneous rate of change
+- Defined using a limit process
+- Geometrically: slope of tangent line
+- First principles: f'(x) = lim(h→0) [f(x+h) - f(x)]/h
+- Leads to useful rules like the power rule
+
+ Section 2.2: Power Rule
 
 The power rule states that for any function f(x) = x^n where n is a real number:
 
@@ -49,7 +120,7 @@ This is one of the most fundamental differentiation rules. Examples:
 - If f(x) = x^(1/2), then f'(x) = (1/2)x^(-1/2)
 - If f(x) = 1/x = x^(-1), then f'(x) = -x^(-2)
 
-### Section 2.3: Applications of Derivatives
+# # Section 2.3: Applications of Derivatives
 
 Derivatives have many practical applications:
 1. Finding velocity from position (physics)
@@ -57,9 +128,9 @@ Derivatives have many practical applications:
 3. Related rates problems
 4. Curve sketching and analysis
 
-## Chapter 3: Integration
+# # Chapter 3: Integration
 
-### Section 3.1: Antiderivatives
+# ## Section 3.1: Antiderivatives
 
 An antiderivative of a function f(x) is a function F(x) such that F'(x) = f(x). 
 
@@ -76,7 +147,7 @@ This theorem connects differentiation and integration. It states that if f is co
 
 This allows us to evaluate definite integrals using antiderivatives, making integration much more practical.
 
-### Section 3.3: Basic Integration Techniques
+# # # Section 3.3: Basic Integration Techniques
 
 Common integration formulas:
 - ∫ x^n dx = x^(n+1)/(n+1) + C (for n ≠ -1)

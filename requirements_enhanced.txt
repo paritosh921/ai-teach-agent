@@ -1,0 +1,32 @@
+# Enhanced AI-Powered Tutorial Video Pipeline Requirements
+
+# Core Dependencies
+manim>=0.18.1,<0.19.0
+numpy>=1.24.0
+matplotlib>=3.6.0
+
+# AI and ML Dependencies  
+openai>=1.0.0
+google-generativeai>=0.3.0
+
+# Video Processing
+opencv-python>=4.8.0
+
+# Data Processing
+pandas>=1.5.0
+pyyaml>=6.0
+
+# Additional utilities
+pathlib-mate>=1.0.0
+dataclasses-json>=0.6.0
+python-dotenv>=1.0.0
+
+# Optional but recommended
+jupyter>=1.0.0  # For notebook support
+tqdm>=4.64.0   # Progress bars
+rich>=13.0.0   # Better CLI output
+
+# Development Dependencies (optional)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0

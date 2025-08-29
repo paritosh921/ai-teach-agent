@@ -114,7 +114,11 @@ class ManimCompiler:
             
             # Prepare compilation command
             cmd = self._build_manim_command(code_filepath, scene_name, resolution)
-            print(f"⚙️ Command: {' '.join(cmd)}")
+            # Safely print command with encoding handling
+            try:
+                print(f"Command: {' '.join(cmd)}")
+            except UnicodeEncodeError:
+                print("Command: <contains unicode characters>")
             
             # Execute compilation
             result = self._execute_compilation(cmd, code_filepath)
@@ -129,12 +133,20 @@ class ManimCompiler:
                     print("WARNING: Compilation succeeded but no video file found")
                     return False, result.stdout, "Video file not found after compilation", None
             else:
-                print(f"ERROR: Compilation failed: {result.stderr[:200]}...")
+                # Print a reasonable amount of error for debugging, but don't truncate the actual error
+                error_preview = result.stderr[:500] if len(result.stderr) > 500 else result.stderr
+                if len(result.stderr) > 500:
+                    error_preview += "... (truncated for display, full error passed to agent)"
+                print(f"ERROR: Compilation failed: {error_preview}")
                 return False, result.stdout, result.stderr, None
                 
         except Exception as e:
             error_msg = f"Compilation exception: {e}"
             print(f"BOOM: {error_msg}")
+            # Add detailed error info for debugging
+            import traceback
+            print(f"DEBUG: Full traceback:")
+            traceback.print_exc()
             return False, "", error_msg, None
     
     def apply_patch(self, original_code: str, patch_content: str) -> PatchResult:
@@ -325,20 +337,48 @@ class ManimCompiler:
             working_dir = Path(code_filepath).parent
             
             # Set environment variables for UTF-8 encoding
+            import platform
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
             env['PYTHONLEGACYWINDOWSFSENCODING'] = '0'
+            env['PYTHONCOERCECLOCALE'] = '0'
             
-            result = subprocess.run(
-                cmd,
-                cwd=working_dir,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-                env=env,
-                encoding='utf-8',
-                errors='replace'
-            )
+            # Windows-specific fixes for Unicode handling
+            if platform.system() == 'Windows':
+                # Ensure console encoding is set properly
+                env['PYTHONHASHSEED'] = '0'
+                # For Windows, convert command to string and back to avoid encoding issues
+                cmd_str = ' '.join(f'"{arg}"' if ' ' in arg else arg for arg in cmd)
+                # Safely print command string with encoding handling
+                try:
+                    print(f"Command string: {cmd_str}")
+                except UnicodeEncodeError:
+                    print("Command string: <contains unicode characters>")
+                
+                # Use shell=True on Windows with proper encoding
+                result = subprocess.run(
+                    cmd_str,
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                    env=env,
+                    encoding='utf-8',
+                    errors='replace',
+                    shell=True
+                )
+            else:
+                # Linux/Mac - use original approach
+                result = subprocess.run(
+                    cmd,
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                    env=env,
+                    encoding='utf-8',
+                    errors='replace'
+                )
             
 
             
@@ -394,10 +434,19 @@ class ManimCompiler:
         
         quality_dir = quality_dirs.get(settings["quality"], "480p15")
         
+        # Manim creates videos in different locations depending on working directory
+        code_parent = Path(code_filepath).parent
+        scene_filename = Path(code_filepath).stem  # Get filename without .py extension
+        
         # Possible video paths
         possible_paths = [
+            # Expected location based on --media_dir from working directory
+            code_parent / "output" / "builder" / "media" / "videos" / scene_filename / quality_dir / f"{scene_name}.mp4",
+            # Alternative locations
+            self.output_dir / "media" / "videos" / scene_filename / quality_dir / f"{scene_name}.mp4",
             self.output_dir / "media" / "videos" / scene_name / quality_dir / f"{scene_name}.mp4",
             self.output_dir / "media" / "videos" / quality_dir / f"{scene_name}.mp4",
+            code_parent / "media" / "videos" / scene_filename / quality_dir / f"{scene_name}.mp4",
             Path(code_filepath).parent / "media" / "videos" / scene_name / quality_dir / f"{scene_name}.mp4"
         ]
         

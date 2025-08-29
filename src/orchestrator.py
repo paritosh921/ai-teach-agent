@@ -78,7 +78,7 @@ class VideoOrchestrator:
     """
     
     def __init__(self, openai_api_key: str, gemini_api_key: Optional[str] = None,
-                 config: Optional[OrchestrationConfig] = None):
+                 config: Optional[OrchestrationConfig] = None, model: str = None):
         """
         Initialize orchestrator with API keys and configuration
         
@@ -86,11 +86,12 @@ class VideoOrchestrator:
             openai_api_key: OpenAI API key for Builder LLM
             gemini_api_key: Optional Gemini API key for evaluation
             config: Optional configuration overrides
+            model: Optional OpenAI model override (defaults to OPENAI_MODEL env var or gpt-5-mini)
         """
         self.config = config or OrchestrationConfig()
         
         # Initialize components
-        self.builder_llm = BuilderLLM(openai_api_key)
+        self.builder_llm = BuilderLLM(openai_api_key, model)
         
         self.video_evaluator = None
         if gemini_api_key and self.config.enable_quality_evaluation:
@@ -167,67 +168,86 @@ class VideoOrchestrator:
             return self._finalize_workflow(False, error_msg)
     
     def _execute_initial_build(self, request: BuildRequest) -> bool:
-        """Execute initial OUTLINE → YAML → CODE → ACTION generation"""
+        """Execute initial OUTLINE → YAML → CODE → ACTION generation with automatic error recovery"""
         print("BUILD: Phase 1: Initial Build")
         print("-" * 30)
         
-        try:
-            # Call Builder LLM for initial generation
-            build_response = self.builder_llm.build_video(request)
-            
-            # Validate YAML specification
+        max_retries = 3
+        for attempt in range(max_retries):
             try:
-                validate_video_yaml(build_response.yaml_spec)
-                print("SUCCESS: YAML specification validated successfully")
-            except ValidationError as e:
-                print(f"ERROR: YAML validation failed: {e}")
-                print(f"Generated YAML structure:")
-                print(f"  - Top level keys: {list(build_response.yaml_spec.keys()) if build_response.yaml_spec else 'None'}")
-                if 'scenes' in build_response.yaml_spec:
-                    scenes = build_response.yaml_spec['scenes']
-                    print(f"  - Number of scenes: {len(scenes)}")
-                    if scenes:
-                        print(f"  - First scene keys: {list(scenes[0].keys())}")
-                        if 'layout' in scenes[0] and 'elements' in scenes[0]['layout']:
-                            elements = scenes[0]['layout']['elements']
-                            if elements:
-                                print(f"  - First element keys: {list(elements[0].keys())}")
-                self.current_build.error_message = f"Invalid YAML: {e}"
-                return False
-            
-            # Display layout validation results if available
-            if hasattr(build_response, 'layout_validation') and build_response.layout_validation:
-                layout_summary = self.builder_llm.get_layout_validation_summary(build_response)
-                print(f"RULER: {layout_summary}")
+                # Call Builder LLM for initial generation
+                if attempt == 0:
+                    build_response = self.builder_llm.build_video(request)
+                else:
+                    print(f"BUILD: Retry attempt {attempt}/{max_retries-1} with error corrections...")
+                    build_response = self._retry_build_with_corrections(request, last_error, attempt)
                 
-                # Log layout validation details
-                validation = build_response.layout_validation
-                if validation.get('issues'):
-                    print(f"   └─ Found {validation.get('total_issues', 0)} layout issues")
-                    if validation.get('recommendations'):
-                        for rec in validation['recommendations'][:2]:  # Show first 2 recommendations
-                            print(f"   TIP: {rec}")
-            else:
-                print("RULER: Layout validation: Skipped (utilities not available)")
+                # Pre-validate before formal YAML validation
+                yaml_issues = self._pre_validate_yaml_structure(build_response.yaml_spec)
+                if yaml_issues:
+                    print(f"WARNING: Pre-validation found {len(yaml_issues)} issues:")
+                    for issue in yaml_issues[:3]:  # Show first 3 issues
+                        print(f"  - {issue}")
+                    
+                    if attempt < max_retries - 1:
+                        last_error = f"Missing required YAML fields: {', '.join(yaml_issues)}"
+                        continue
+                
+                # Validate YAML specification
+                try:
+                    validate_video_yaml(build_response.yaml_spec)
+                    print("SUCCESS: YAML specification validated successfully")
+                    break  # Success - exit retry loop
+                    
+                except ValidationError as e:
+                    last_error = str(e)
+                    print(f"ERROR: YAML validation failed (attempt {attempt+1}/{max_retries}): {e}")
+                    self._log_yaml_structure(build_response.yaml_spec)
+                    
+                    if attempt < max_retries - 1:
+                        continue  # Try again
+                    else:
+                        # Final failure after all retries
+                        self.current_build.error_message = f"Invalid YAML after {max_retries} attempts: {e}"
+                        return False
             
-            # Store generated content
-            self.current_build.yaml_spec = build_response.yaml_spec
-            self.current_build.code = build_response.code
+            except Exception as e:
+                last_error = str(e)
+                print(f"ERROR: Build attempt {attempt+1} failed: {e}")
+                if attempt == max_retries - 1:
+                    print(f"ERROR: Initial build failed after {max_retries} attempts")
+                    self.current_build.error_message = f"Build failed: {e}"
+                    return False
             
-            # Save files for debugging
-            self._save_build_artifacts(build_response, request.topic)
+        # If we get here, validation succeeded
+        # Display layout validation results if available
+        if hasattr(build_response, 'layout_validation') and build_response.layout_validation:
+            layout_summary = self.builder_llm.get_layout_validation_summary(build_response)
+            print(f"RULER: {layout_summary}")
             
-            print("SUCCESS: Initial build completed successfully")
-            print(f"PAGE: Generated {len(build_response.outline.split('n'))} outline sections")
-            print(f"VIDEO: Created {len(build_response.yaml_spec.get('scenes', []))} scenes")
-            print(f"NOTE: Generated {len(build_response.code.split('n'))} lines of code")
-            
-            return True
-            
-        except Exception as e:
-            print(f"ERROR: Initial build failed: {e}")
-            self.current_build.error_message = str(e)
-            return False
+            # Log layout validation details
+            validation = build_response.layout_validation
+            if validation.get('issues'):
+                print(f"   Found {validation.get('total_issues', 0)} layout issues")
+                if validation.get('recommendations'):
+                    for rec in validation['recommendations'][:2]:  # Show first 2 recommendations
+                        print(f"   TIP: {rec}")
+        else:
+            print("RULER: Layout validation: Skipped (utilities not available)")
+        
+        # Store generated content
+        self.current_build.yaml_spec = build_response.yaml_spec
+        self.current_build.code = build_response.code
+        
+        # Save files for debugging
+        self._save_build_artifacts(build_response, request.topic)
+        
+        print("SUCCESS: Initial build completed successfully")
+        print(f"PAGE: Generated {len(build_response.outline.split('n'))} outline sections")
+        print(f"VIDEO: Created {len(build_response.yaml_spec.get('scenes', []))} scenes")
+        print(f"NOTE: Generated {len(build_response.code.split('n'))} lines of code")
+        
+        return True
     
     def _execute_480p_workflow(self) -> bool:
         """Execute 480p compilation with error repair loop"""
@@ -248,7 +268,11 @@ class VideoOrchestrator:
                 self.current_build.video_path = video_path
                 return True
             
-            print(f"ERROR: Compilation failed: {stderr[:200]}...")
+            # Print a reasonable amount of error for debugging
+            error_preview = stderr[:500] if len(stderr) > 500 else stderr
+            if len(stderr) > 500:
+                error_preview += "... (truncated for display, full error used for repair)"
+            print(f"ERROR: Compilation failed: {error_preview}")
             
             # If not last attempt, try to repair
             if attempt < self.config.max_repair_attempts:
@@ -309,7 +333,10 @@ class VideoOrchestrator:
                             print("SUCCESS: Recompilation successful")
                             continue
                         else:
-                            print(f"ERROR: Recompilation failed: {stderr[:200]}...")
+                            error_preview = stderr[:500] if len(stderr) > 500 else stderr
+                            if len(stderr) > 500:
+                                error_preview += "... (truncated for display)"
+                            print(f"ERROR: Recompilation failed: {error_preview}")
                             return False
                     else:
                         print("WARNING: Could not apply visual fixes automatically")
@@ -337,7 +364,10 @@ class VideoOrchestrator:
             self.current_build.video_path = video_path
             return True
         else:
-            print(f"ERROR: 1080p compilation failed: {stderr[:200]}...")
+            error_preview = stderr[:500] if len(stderr) > 500 else stderr
+            if len(stderr) > 500:
+                error_preview += "... (truncated for display)"
+            print(f"ERROR: 1080p compilation failed: {error_preview}")
             # For 1080p failure, keep the 480p version
             print("LIST: Keeping 480p version as final output")
             return True  # Don't fail the entire workflow for 1080p issues
@@ -513,7 +543,18 @@ class VideoOrchestrator:
     
     def _save_build_artifacts(self, build_response: BuildResponse, topic: str):
         """Save all build artifacts for debugging"""
+        # Sanitize topic name for filename
         topic_name = topic.replace(' ', '_').lower()
+        # Remove invalid filename characters
+        invalid_chars = '<>:"/\\|?*'
+        for char in invalid_chars:
+            topic_name = topic_name.replace(char, '')
+        # Remove leading/trailing underscores and colons
+        topic_name = topic_name.strip('_:')
+        # Ensure we have a valid name
+        if not topic_name:
+            topic_name = 'unnamed_topic'
+
         timestamp = int(time.time())
         
         # Save outline
@@ -574,6 +615,130 @@ class VideoOrchestrator:
         print("=" * 60)
         return self.current_build or WorkflowResult(success=False, state=self.current_state, error_message=message)
     
+    def _pre_validate_yaml_structure(self, yaml_spec: Dict[str, Any]) -> List[str]:
+        """
+        Pre-validate YAML structure to detect missing required fields
+        Returns list of issues found
+        """
+        issues = []
+        
+        if not yaml_spec:
+            issues.append("YAML specification is None or empty")
+            return issues
+        
+        # Check required top-level fields
+        required_fields = ['topic', 'audience', 'style', 'global', 'scenes']
+        for field in required_fields:
+            if field not in yaml_spec:
+                issues.append(f"Missing required top-level field: '{field}'")
+        
+        # Check style structure if present
+        if 'style' in yaml_spec and isinstance(yaml_spec['style'], dict):
+            style_required = ['voice', 'pace_wpm', 'theme']
+            for field in style_required:
+                if field not in yaml_spec['style']:
+                    issues.append(f"Missing required style field: '{field}'")
+        
+        # Check global structure if present
+        if 'global' in yaml_spec and isinstance(yaml_spec['global'], dict):
+            global_required = ['safe_margin_pct', 'default_font_size', 'max_width_pct']
+            for field in global_required:
+                if field not in yaml_spec['global']:
+                    issues.append(f"Missing required global field: '{field}'")
+        
+        # Check scenes structure if present
+        if 'scenes' in yaml_spec:
+            if not isinstance(yaml_spec['scenes'], list) or len(yaml_spec['scenes']) == 0:
+                issues.append("Scenes field must be a non-empty list")
+            else:
+                scene_required = ['id', 'goal', 'time_budget_s', 'narration', 'layout', 'checks']
+                for i, scene in enumerate(yaml_spec['scenes'][:1]):  # Check first scene only
+                    for field in scene_required:
+                        if field not in scene:
+                            issues.append(f"Scene {i+1} missing required field: '{field}'")
+        
+        return issues
+    
+    def _retry_build_with_corrections(self, request: BuildRequest, error_message: str, attempt: int) -> 'BuildResponse':
+        """
+        Retry build with specific error corrections and enhanced instructions
+        """
+        # Create enhanced request with error context
+        enhanced_request = BuildRequest(
+            topic=request.topic,
+            audience=request.audience,
+            voice=request.voice,
+            pace_wpm=request.pace_wpm,
+            theme=request.theme,
+            poml_content=request.poml_content,
+            source_content=request.source_content
+        )
+        
+        # Add error correction context to POML content if available
+        if enhanced_request.poml_content:
+            correction_prompt = f'''
+            
+CRITICAL ERROR CORRECTION REQUIRED:
+Previous attempt failed with: {error_message}
+
+YAML STRUCTURE REQUIREMENTS (MANDATORY):
+- Include ALL required fields: topic, audience, style, global, scenes
+- Each scene MUST have: id, goal, time_budget_s, narration, layout, checks  
+- Text elements MUST have: key, type, column, and text/content field
+- Use template: "single" (not "singl")
+
+EXAMPLE VALID YAML STRUCTURE:
+```yaml
+topic: "Your Topic Here"
+audience: "undergraduate"
+style:
+  voice: "professional"
+  pace_wpm: 150
+  theme: "3blue1brown"
+global:
+  safe_margin_pct: 0.06
+  default_font_size: 42
+  max_width_pct: 0.92
+  grid:
+    template: "single"
+    config: {{}}
+scenes:
+  - id: "intro_scene"
+    goal: "Introduce the topic"
+    time_budget_s: 15
+    narration: "Welcome to our lesson"
+    layout:
+      template: "single"
+      elements:
+        - key: "title"
+          type: "Text"
+          column: "center"
+          text: "Your Title"
+    checks: ["text_readable", "no_overlap"]
+```
+
+ENSURE YOUR RESPONSE INCLUDES VALID YAML WITH ALL REQUIRED FIELDS.
+'''
+            enhanced_request.poml_content += correction_prompt
+        
+        # Call Builder LLM with enhanced context
+        return self.builder_llm.build_video(enhanced_request)
+    
+    def _log_yaml_structure(self, yaml_spec: Dict[str, Any]) -> None:
+        """Log detailed YAML structure for debugging"""
+        print(f"Generated YAML structure:")
+        print(f"  - Top level keys: {list(yaml_spec.keys()) if yaml_spec else 'None'}")
+        
+        if yaml_spec and 'scenes' in yaml_spec:
+            scenes = yaml_spec['scenes']
+            print(f"  - Number of scenes: {len(scenes)}")
+            if scenes and isinstance(scenes, list):
+                print(f"  - First scene keys: {list(scenes[0].keys()) if isinstance(scenes[0], dict) else 'Invalid scene structure'}")
+                if isinstance(scenes[0], dict) and 'layout' in scenes[0] and 'elements' in scenes[0]['layout']:
+                    elements = scenes[0]['layout']['elements']
+                    if elements and isinstance(elements, list):
+                        print(f"  - First element keys: {list(elements[0].keys()) if isinstance(elements[0], dict) else 'Invalid element structure'}")
+
     def get_status(self) -> Dict[str, Any]:
         """Get current orchestrator status"""
         return {
@@ -593,6 +758,6 @@ class VideoOrchestrator:
 
 
 def create_orchestrator(openai_api_key: str, gemini_api_key: Optional[str] = None,
-                       config: Optional[OrchestrationConfig] = None) -> VideoOrchestrator:
+                       config: Optional[OrchestrationConfig] = None, model: str = None) -> VideoOrchestrator:
     """Factory function for creating video orchestrator"""
-    return VideoOrchestrator(openai_api_key, gemini_api_key, config)
+    return VideoOrchestrator(openai_api_key, gemini_api_key, config, model)

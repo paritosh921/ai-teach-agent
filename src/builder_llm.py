@@ -101,6 +101,12 @@ class BuilderLLM:
 - Prefer fixed camera; if pan/zoom, recompute safe frame.
 - Determinism: do not introduce randomness; if needed, set a fixed seed.
 
+## Critical Manim API constraints
+- Text objects: ONLY use font_size parameter, NEVER use weight, style, size, or align
+- MathTex objects: ONLY use font_size parameter, NEVER use weight, style, or size  
+- safe_position() function: NEVER call this function - use standard Manim positioning like .to_edge(), .next_to(), .shift()
+- Position objects directly: text.to_edge(UP), text.shift(DOWN * 2), etc.
+
 ## Output blocks (always in this order)
 1) OUTLINE  — hierarchical bullet list.
 2) YAML     — video spec matching the SCHEMA below.
@@ -109,7 +115,7 @@ class BuilderLLM:
    - On error logs or visual feedback, emit only a PATCH block then a new ACTION.
 
 ## YAML SCHEMA (author strictly to this)
-topic: str
+topic: str  # MUST match the educational topic from POML content, not generic topics
 audience: str
 style: { voice: str, pace_wpm: int, theme: str }
 global:
@@ -128,23 +134,30 @@ scenes:
         - key: str
           type: Text|MathTex|AxesPlot|Table|Image
           # content fields (text|tex|path|fn etc.)
-          column: left|right|center
+          column: left|right|center  # Use lowercase values only
           style: { font_size?: int, weight?: str }
           wrap?: { max_chars?: int }
           scale_fit?: { max_width_pct?: number, max_height_pct?: number }
           z_index?: int
-          enter: { anim: str, at: number }
-          exit?:  { anim: str, at: number }
+          enter: { anim: str, at: number }  # Valid anim: Write, FadeIn, FadeOut, Create, GrowFromCenter, ShrinkToCenter, Transform
+          exit?:  { anim: str, at: number }  # Valid anim: Write, FadeIn, FadeOut, Create, GrowFromCenter, ShrinkToCenter, Transform
     checks:
       require_no_overlap: bool
       require_in_frame:  bool
 
 ## Code expectations
 - Provide a single file `scene.py` with imports and a `class Video(Scene):`.
+- ALWAYS start with: `from manim import *` to import all necessary constants (CENTER, LEFT, RIGHT, UP, DOWN, etc.)
 - Include helper utilities inline (safe_frame, scale_to_fit_pct, overlap checks, place_in_grid, wrap_text).
 - Perform collision checks at each enter/exit boundary; auto-shrink/reflow if violated.
 - Use VGroup(...).arrange() with nonzero `buff` (≥ 0.2).
 - Explicit z_index. Ensure exits occur before new entrances in same region.
+- Use proper Manim constants: `ORIGIN` (not `CENTER`), `LEFT`, `RIGHT`, `UP`, `DOWN` for positioning and alignment.
+- Use correct Manim methods: `.to_edge(UP/DOWN/LEFT/RIGHT)`, `.next_to()`, `.move_to()`, `.shift()` for positioning.
+- Do NOT use `.align_on_border()` - this method doesn't exist in Manim.
+- In YAML, use lowercase column values: `left`, `right`, `center` (not `LEFT`, `RIGHT`, `CENTER`).
+- Do NOT use `CENTER` constant in code - use `ORIGIN` instead for center positioning.
+- Use valid animation types: Write, FadeIn, FadeOut, Create, GrowFromCenter, ShrinkToCenter, Transform.
 
 ## Error/feedback handling
 - If the orchestrator sends you a `TRACEBACK` block, reply with:
@@ -162,6 +175,8 @@ Follow formats exactly. Never add commentary outside the defined blocks."""
     USER_PROMPT_TEMPLATE = """Build a video for the topic: "{topic}"
 Audience: "{audience}"
 Style: {{ voice: "{voice}", pace_wpm: {pace_wpm}, theme: "{theme}" }}
+
+{source_content_section}
 
 Constraints: Use the schema and rules in your system prompt. Begin with OUTLINE → YAML → CODE → ACTION."""
 
@@ -183,7 +198,12 @@ Instructions:
 CRITICAL: Ensure your YAML includes ALL required fields:
 - Top level: topic, audience, style (voice/pace_wpm/theme), global, scenes
 - Each scene: id, goal, time_budget_s, narration, layout, checks
-- Each element: key, type, column, and content field (text/content/tex)
+- Each element: key, type, column, and appropriate content field:
+  * Text/MathTex elements: text/content/tex field
+  * AxesPlot elements: fn field (function to plot)
+  * Image elements: path field
+
+IMPORTANT: The topic field in your YAML MUST match the educational topic from the POML content. Do not use generic topics like "Understanding Limits" - use the specific topic from the POML task and content sections.
 
 Begin with OUTLINE → YAML → CODE → ACTION, incorporating all POML specifications."""
 
@@ -215,11 +235,20 @@ VISUAL_REPORT:
     PROMOTION_PROMPT = """The visual report is PERFECT. Output only:
 ACTION: COMPILE_1080P"""
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, model: str = None):
         """Initialize the Builder LLM with OpenAI client"""
         self.client = OpenAI(api_key=api_key)
-        self.model = "gpt-4"  # Use GPT-4 for deterministic, high-quality output
-        self.temperature = 0.1  # Low temperature for deterministic behavior
+        # Model selection with fallback support
+        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+        # Model capability tracking
+        self.supports_temperature = self._check_temperature_support(self.model)
+        self.fallback_models = ['gpt-4o', 'gpt-4-turbo', 'gpt-4o-mini', 'gpt-3.5-turbo']
+        
+    def _check_temperature_support(self, model: str) -> bool:
+        """Check if model supports temperature parameter"""
+        # GPT-5 models don't support custom temperature
+        gpt5_models = ['gpt-5', 'gpt-5-mini', 'gpt-5-nano', 'o3-mini', 'o1', 'o1-mini']
+        return not any(gpt5_model in model.lower() for gpt5_model in gpt5_models)
         
     def build_video(self, request: BuildRequest) -> BuildResponse:
         """
@@ -253,12 +282,22 @@ ACTION: COMPILE_1080P"""
             )
         else:
             # Use standard template
+            # Format source content section
+            if request.source_content and request.source_content.strip():
+                source_content_section = f"""EDUCATIONAL CONTENT TO COVER:
+{request.source_content}
+
+INSTRUCTIONS: Create a comprehensive educational animation that covers ALL the concepts, examples, formulas, and explanations provided in the educational content above. Structure the video to build understanding progressively through the material."""
+            else:
+                source_content_section = "Create a comprehensive educational animation that introduces and explains the topic clearly."
+            
             user_prompt = self.USER_PROMPT_TEMPLATE.format(
                 topic=request.topic,
                 audience=request.audience,
                 voice=request.voice,
                 pace_wpm=request.pace_wpm,
-                theme=request.theme
+                theme=request.theme,
+                source_content_section=source_content_section
             )
         
         response = self._call_llm(user_prompt)
@@ -343,27 +382,80 @@ ACTION: COMPILE_1080P"""
     
     def _call_llm(self, user_prompt: str, max_tokens: int = 4000) -> str:
         """Make API call to OpenAI with system and user prompts"""
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=self.temperature,
-                max_tokens=max_tokens
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            raise Exception(f"Builder LLM API call failed: {e}")
+        return self._call_llm_with_fallback(user_prompt, max_tokens, [self.model] + self.fallback_models)
     
-    def _truncate_content(self, content: str, max_chars: int = 3000) -> str:
+    def _call_llm_with_fallback(self, user_prompt: str, max_tokens: int, models: List[str]) -> str:
+        """Try API call with model fallbacks for compatibility"""
+        last_error = None
+        
+        for model in models:
+            try:
+                # Build parameters based on model capabilities
+                params = {
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "max_completion_tokens": max_tokens
+                }
+                
+                # Add temperature only for models that support it
+                if self._check_temperature_support(model):
+                    params["temperature"] = 0.1
+                
+                response = self.client.chat.completions.create(**params)
+                
+                # Update current model if different from original
+                if model != self.model:
+                    print(f"INFO: Using fallback model {model} due to compatibility issues with {self.model}")
+                    self.model = model
+                    self.supports_temperature = self._check_temperature_support(model)
+                
+                return response.choices[0].message.content.strip()
+                
+            except Exception as e:
+                last_error = e
+                error_msg = str(e).lower()
+                
+                # Check for parameter-related errors
+                if any(param in error_msg for param in ['temperature', 'unsupported', 'parameter']):
+                    print(f"INFO: Model {model} has parameter compatibility issues, trying next model...")
+                    continue
+                else:
+                    # Non-parameter errors - might be worth retrying with other models
+                    print(f"WARNING: API call failed with {model}: {e}")
+                    continue
+        
+        # All models failed
+        raise Exception(f"Builder LLM API call failed with all models. Last error: {last_error}")
+    
+    def _truncate_content(self, content: str, max_chars: int = 5000) -> str:
         """Truncate content to prevent context length issues"""
         if len(content) <= max_chars:
             return content
         
         # Truncate and add indicator
         truncated = content[:max_chars]
+        
+        # Ensure we don't break in the middle of a critical code structure
+        # Try to truncate at a line boundary to avoid breaking mid-line
+        last_newline = truncated.rfind('\n')
+        if last_newline > max_chars * 0.8:  # Only if we're not losing too much
+            truncated = truncated[:last_newline]
+        
+        # Check for incomplete class or function definitions
+        lines = truncated.split('\n')
+        while lines:
+            last_line = lines[-1].strip()
+            if (last_line.startswith('class ') or last_line.startswith('def ') or 
+                last_line.endswith('if ') or last_line.endswith('if current')):
+                # Remove incomplete line to prevent syntax errors
+                lines = lines[:-1]
+                continue
+            break
+        
+        truncated = '\n'.join(lines)
         truncated += f"\n\n... [TRUNCATED - Original length: {len(content)} chars]"
         return truncated
     
@@ -429,97 +521,18 @@ ACTION: COMPILE_1080P"""
                 print(f"WARNING:  Failed to inject safety guards: {e}")
                 # Continue with original code if injection fails
         
-        # Parse YAML
-        try:
-            # Clean YAML content of various markers
-            if yaml_content:
-                yaml_content = yaml_content.strip()
-                
-                # Remove custom YAML markers
-                if yaml_content.startswith('---BEGIN YAML---'):
-                    yaml_content = yaml_content[16:]  # Remove ---BEGIN YAML---
-                elif yaml_content.startswith('---YAML---'):
-                    yaml_content = yaml_content[10:]  # Remove ---YAML---
-                elif yaml_content.startswith('```yaml'):
-                    yaml_content = yaml_content[7:]   # Remove ```yaml
-                elif yaml_content.startswith('```'):
-                    yaml_content = yaml_content[3:]   # Remove ```
-                
-                # Remove ending markers
-                if yaml_content.endswith('---END YAML---'):
-                    yaml_content = yaml_content[:-14]  # Remove ---END YAML---
-                elif yaml_content.endswith('---'):
-                    yaml_content = yaml_content[:-3]   # Remove ---
-                elif yaml_content.endswith('```'):
-                    yaml_content = yaml_content[:-3]   # Remove ```
-                
-                yaml_content = yaml_content.strip()
-                
-                # Fix common typos in YAML content
-                yaml_content = yaml_content.replace('template: singl', 'template: single')
-                yaml_content = yaml_content.replace('template: "singl"', 'template: "single"')
-                yaml_content = yaml_content.replace("template: 'singl'", "template: 'single'")
-                yaml_content = yaml_content.replace('template: singlee', 'template: single')
-                yaml_content = yaml_content.replace('template: "singlee"', 'template: "single"')
-                yaml_content = yaml_content.replace("template: 'singlee'", "template: 'single'")
-                
-                # Fix invalid column values
-                yaml_content = yaml_content.replace('column: center_right', 'column: right')
-                yaml_content = yaml_content.replace('column: center_left', 'column: left') 
-                yaml_content = yaml_content.replace('column: middle', 'column: center')
-                yaml_content = yaml_content.replace('column: "center_right"', 'column: "right"')
-                yaml_content = yaml_content.replace('column: "center_left"', 'column: "left"')
-                yaml_content = yaml_content.replace('column: "middle"', 'column: "center"')
-                
-                # Fix invalid template names
-                yaml_content = yaml_content.replace('template: one_column', 'template: single')
-                yaml_content = yaml_content.replace('template: "one_column"', 'template: "single"')
-                yaml_content = yaml_content.replace('template: standard', 'template: single')
-                yaml_content = yaml_content.replace('template: "standard"', 'template: "single"')
-                yaml_content = yaml_content.replace('template: basic', 'template: single')
-                yaml_content = yaml_content.replace('template: "basic"', 'template: "single"')
-                
-                # Fix YAML parsing issues with special characters in narration and text
-                import re
-                
-                # Use a more robust approach to quote problematic values
-                lines = yaml_content.split('\n')
-                fixed_lines = []
-                
-                for line in lines:
-                    # Check if this is a narration or text line that needs quoting
-                    if re.match(r'^\s*narration:\s*[^"\n]', line) or re.match(r'^\s*text:\s*[^"\n]', line):
-                        # Find the colon and the value
-                        colon_pos = line.find(':')
-                        if colon_pos != -1:
-                            prefix = line[:colon_pos + 1]
-                            value = line[colon_pos + 1:].strip()
-                            
-                            # If value contains special characters and isn't already quoted
-                            if any(char in value for char in ['(', ')', '²', '³', '→', '≤', '≥', '≠', '≈', '∞', '∫', '∑', '∏', '√', '±', '×', '÷', '°', '′', '″', '‰', '‱', '†', '‡', '•', '·', '‣', '⁃', '⁌', '⁍', '⁎', '⁏', '⁐', '⁑', '⁒', '⁓', '⁔', '⁕', '⁖', '⁗', '⁘', '⁙', '⁚', '⁛', '⁜', '⁝', '⁞']) and not (value.startswith('"') and value.endswith('"')):
-                                # Escape quotes and wrap in quotes
-                                value = value.replace('"', '\\"')
-                                line = f'{prefix} "{value}"'
-                    
-                    fixed_lines.append(line)
-                
-                yaml_content = '\n'.join(fixed_lines)
-            
-            yaml_spec = yaml.safe_load(yaml_content) if yaml_content else {}
-        except yaml.YAMLError as e:
-            print(f"ERROR: YAML parsing failed.")
-            print(f"YAML Error: {e}")
-            print(f"--- YAML CONTENT START (first 1000 chars) ---")
-            print(yaml_content[:1000] if yaml_content else "EMPTY")
-            print(f"--- YAML CONTENT END ---")
-            print(f"Content length: {len(yaml_content) if yaml_content else 0} characters")
-            print(f"Lines: {yaml_content.count(chr(10)) + 1 if yaml_content else 0}")
-            raise Exception(f"Invalid YAML syntax: {e}")
+        # Enhanced YAML parsing with multiple strategies
+        yaml_spec = None
+        if yaml_content:
+            yaml_spec = self._parse_yaml_with_fallbacks(yaml_content)
+        else:
+            print("WARNING: No YAML content found, creating minimal structure")
+            yaml_spec = self._create_minimal_yaml_structure()
         
         return BuildResponse(
-            outline=outline,
+            outline=outline or "# Basic Outline\n1. Introduction\n2. Main Content\n3. Conclusion",
             yaml_spec=yaml_spec,
-            code=code,
+            code=code.strip() if code.strip() else self._create_fallback_code(),
             action=action
         )
     
@@ -789,6 +802,335 @@ ACTION: COMPILE_480P"""
             return f"WARNING:  Layout validation: WARNINGS - {total_issues} issues found (non-critical)"
         else:
             return f"ERROR: Layout validation: FAILED - {total_issues} issues ({critical_issues} critical)"
+    
+    def _parse_yaml_with_fallbacks(self, yaml_content: str) -> Dict[str, Any]:
+        """Parse YAML with multiple fallback strategies"""
+        yaml_content = yaml_content.strip()
+        
+        # Clean YAML content of various markers
+        if yaml_content:
+            yaml_content = self._clean_yaml_content(yaml_content)
+        
+        # Try multiple parsing approaches
+        for attempt_name, yaml_to_try in [
+            ("Original content", yaml_content),
+            ("Cleaned content", self._aggressive_yaml_cleanup(yaml_content)),
+            ("Reconstructed content", self._reconstruct_yaml_from_fragments(yaml_content))
+        ]:
+            try:
+                if yaml_to_try:
+                    yaml_spec = yaml.safe_load(yaml_to_try)
+                    if yaml_spec and isinstance(yaml_spec, dict):
+                        print(f"SUCCESS: YAML parsed using {attempt_name}")
+                        return yaml_spec
+            except yaml.YAMLError as e:
+                print(f"WARNING: YAML parsing failed for {attempt_name}: {e}")
+                continue
+        
+        print("WARNING: All YAML parsing attempts failed, creating minimal structure")
+        return self._create_minimal_yaml_structure()
+    
+    def _clean_yaml_content(self, yaml_content: str) -> str:
+        """Clean YAML content of common issues"""
+        # Remove code block markers
+        if yaml_content.startswith('```yaml'):
+            yaml_lines = yaml_content.split('\n')
+            yaml_lines = [line for line in yaml_lines if not line.strip().startswith('```')]
+            yaml_content = '\n'.join(yaml_lines)
+        
+        # Remove custom YAML markers
+        if yaml_content.startswith('---BEGIN YAML---'):
+            yaml_content = yaml_content[16:]  # Remove ---BEGIN YAML---
+        elif yaml_content.startswith('---YAML---'):
+            yaml_content = yaml_content[10:]  # Remove ---YAML---
+        
+        # Remove ending markers
+        if yaml_content.endswith('---END YAML---'):
+            yaml_content = yaml_content[:-14]  # Remove ---END YAML---
+        elif yaml_content.endswith('---'):
+            yaml_content = yaml_content[:-3]   # Remove ---
+        elif yaml_content.endswith('```'):
+            yaml_content = yaml_content[:-3]   # Remove ```
+        
+        # Fix common typos
+        yaml_content = yaml_content.replace('template: singl', 'template: single')
+        yaml_content = yaml_content.replace('template: "singl"', 'template: "single"')
+        yaml_content = yaml_content.replace("template: 'singl'", "template: 'single'")
+        
+        return yaml_content.strip()
+    
+    def _aggressive_yaml_cleanup(self, yaml_content: str) -> str:
+        """Aggressive cleanup for malformed YAML"""
+        import re
+        
+        lines = yaml_content.split('\n')
+        cleaned_lines = []
+        
+        for line in lines:
+            # Skip empty lines and comments
+            if not line.strip() or line.strip().startswith('#'):
+                continue
+            
+            # Fix common issues
+            line = re.sub(r'^\s*-\s*([^:])', r'- \1', line)  # Fix list items
+            line = re.sub(r':([^\s])', r': \1', line)  # Add space after colons
+            
+            # Quote problematic values
+            if re.match(r'^\s*narration:\s*[^"\n]', line):
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    line = f"{parts[0]}: \"{parts[1].strip()}\""
+            
+            cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines)
+    
+    def _reconstruct_yaml_from_fragments(self, yaml_content: str) -> str:
+        """Attempt to reconstruct valid YAML from fragments"""
+        import re
+        
+        # Extract key-value pairs
+        topic_match = re.search(r'topic:?\s*([^\n]+)', yaml_content, re.IGNORECASE)
+        audience_match = re.search(r'audience:?\s*([^\n]+)', yaml_content, re.IGNORECASE)
+        
+        reconstructed = []
+        
+        if topic_match:
+            reconstructed.append(f'topic: "{topic_match.group(1).strip()}"')
+        else:
+            reconstructed.append('topic: "Untitled Topic"')
+        
+        if audience_match:
+            reconstructed.append(f'audience: "{audience_match.group(1).strip()}"')
+        else:
+            reconstructed.append('audience: "undergraduate"')
+        
+        # Add basic structure
+        reconstructed.extend([
+            'style:',
+            '  voice: "professional"',
+            '  pace_wpm: 150',
+            '  theme: "3blue1brown"',
+            'global:',
+            '  safe_margin_pct: 0.06',
+            '  default_font_size: 42',
+            '  max_width_pct: 0.92',
+            '  grid:',
+            '    template: "single"',
+            '    config: {}',
+            'scenes:',
+            '  - id: "main_scene"',
+            '    goal: "Present the content"',
+            '    time_budget_s: 30',
+            '    narration: "Let\'s explore this topic"',
+            '    layout:',
+            '      template: "single"',
+            '      elements:',
+            '        - key: "title"',
+            '          type: "Text"',
+            '          column: "center"',
+            '          text: "Main Title"',
+            '    checks: ["text_readable", "no_overlap"]'
+        ])
+        
+        return '\n'.join(reconstructed)
+    
+    def _create_minimal_yaml_structure(self) -> Dict[str, Any]:
+        """Create minimal valid YAML structure as last resort"""
+        return {
+            'topic': 'Emergency Fallback Topic',
+            'audience': 'undergraduate',
+            'style': {
+                'voice': 'professional',
+                'pace_wpm': 150,
+                'theme': '3blue1brown'
+            },
+            'global': {
+                'safe_margin_pct': 0.06,
+                'default_font_size': 42,
+                'max_width_pct': 0.92,
+                'grid': {
+                    'template': 'single',
+                    'config': {}
+                }
+            },
+            'scenes': [{
+                'id': 'fallback_scene',
+                'goal': 'Present basic content due to parsing failure',
+                'time_budget_s': 20,
+                'narration': 'This is a fallback scene created due to parsing issues.',
+                'layout': {
+                    'template': 'single',
+                    'elements': [{
+                        'key': 'emergency_text',
+                        'type': 'Text',
+                        'column': 'center',
+                        'text': 'Content parsing failed - using emergency fallback'
+                    }]
+                },
+                'checks': ['text_readable', 'no_overlap']
+            }]
+        }
+    
+    def _create_fallback_code(self) -> str:
+        """Create basic fallback code when parsing fails"""
+        return '''from manim import *
+
+class EducationalScene(Scene):
+    def construct(self):
+        # Fallback scene due to parsing failure
+        title = Text("Parsing Error - Fallback Content", font_size=36)
+        title.to_edge(UP)
+        
+        message = Text(
+            "The original content could not be parsed.\\n"
+            "This is a fallback scene.",
+            font_size=24
+        )
+        message.next_to(title, DOWN, buff=1)
+        
+        self.play(Write(title))
+        self.play(FadeIn(message))
+        self.wait(2)
+'''
+    
+    def _parse_response_standard(self, response: str) -> Dict[str, List[str]]:
+        """Standard section-based parsing"""
+        sections = {}
+        current_section = None
+        lines = response.split('\n')
+        
+        for line in lines:
+            line_stripped = line.strip()
+            
+            # Detect section headers (support both plain and markdown formats)
+            if line_stripped in ['OUTLINE', 'YAML', 'CODE'] or \
+               line_stripped in ['## OUTLINE', '## YAML', '## CODE'] or \
+               line_stripped in ['# OUTLINE', '# YAML', '# CODE']:
+                # Extract section name (remove markdown headers)
+                section_name = line_stripped.replace('#', '').strip()
+                current_section = section_name
+                sections[current_section] = []
+            elif line_stripped.startswith('ACTION:') or line_stripped.startswith('## ACTION'):
+                sections['ACTION'] = line_stripped
+            elif current_section and line_stripped:
+                sections[current_section].append(line)
+        
+        return sections
+    
+    def _parse_response_regex(self, response: str) -> Dict[str, List[str]]:
+        """Regex-based parsing for malformed responses"""
+        import re
+        sections = {}
+        
+        # Try to extract YAML block using various patterns
+        yaml_patterns = [
+            r'YAML\s*\n(.*?)(?=\n(?:CODE|ACTION|$))',
+            r'```yaml\n(.*?)\n```',
+            r'topic:\s*.*?(?=\n\n|$)',
+            r'\btopic:.*?\nscenes:.*?(?=\n\n|CODE|ACTION|$)'
+        ]
+        
+        yaml_content = []
+        for pattern in yaml_patterns:
+            match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
+            if match:
+                yaml_content = match.group(1).strip().split('\n') if match.groups() else match.group(0).strip().split('\n')
+                break
+        
+        if yaml_content:
+            sections['YAML'] = yaml_content
+        
+        # Extract CODE similarly
+        code_patterns = [
+            r'CODE\s*\n(.*?)(?=\n(?:ACTION|$))',
+            r'```python\n(.*?)\n```',
+            r'class\s+\w*Scene.*?(?=\n\n|ACTION|$)'
+        ]
+        
+        for pattern in code_patterns:
+            match = re.search(pattern, response, re.DOTALL | re.IGNORECASE)
+            if match:
+                sections['CODE'] = match.group(1).strip().split('\n') if match.groups() else match.group(0).strip().split('\n')
+                break
+        
+        # Extract ACTION
+        action_match = re.search(r'ACTION:\s*(.*)', response, re.IGNORECASE)
+        if action_match:
+            sections['ACTION'] = f"ACTION: {action_match.group(1).strip()}"
+        
+        # Basic outline if nothing else found
+        if 'OUTLINE' not in sections:
+            sections['OUTLINE'] = ["1. Introduction", "2. Main content", "3. Conclusion"]
+        
+        return sections
+    
+    def _parse_response_emergency(self, response: str) -> Dict[str, List[str]]:
+        """Emergency parsing for completely malformed responses"""
+        sections = {}
+        
+        # Look for any YAML-like content
+        if 'topic:' in response.lower() or 'scenes:' in response.lower():
+            # Extract everything that looks like YAML
+            lines = response.split('\n')
+            yaml_lines = []
+            in_yaml_block = False
+            
+            for line in lines:
+                if any(key in line.lower() for key in ['topic:', 'audience:', 'style:', 'global:', 'scenes:']):
+                    in_yaml_block = True
+                if in_yaml_block and (line.strip().startswith('-') or ':' in line or line.strip() == ''):
+                    yaml_lines.append(line)
+                elif in_yaml_block and line.strip() and not (':' in line or line.strip().startswith('-')):
+                    break
+            
+            if yaml_lines:
+                sections['YAML'] = yaml_lines
+        
+        # Look for any Python code
+        if 'class' in response and 'Scene' in response:
+            lines = response.split('\n')
+            code_lines = []
+            in_code = False
+            
+            for line in lines:
+                if 'class' in line and 'Scene' in line:
+                    in_code = True
+                if in_code:
+                    code_lines.append(line)
+            
+            if code_lines:
+                sections['CODE'] = code_lines
+        
+        return sections
+    
+    def _create_emergency_sections(self, response: str) -> Dict[str, List[str]]:
+        """Create basic sections when all parsing fails"""
+        return {
+            'OUTLINE': ["# Emergency Outline", "1. Basic structure created due to parsing failure"],
+            'YAML': [],  # Will trigger minimal YAML creation
+            'CODE': [],  # Will trigger fallback code creation
+            'ACTION': 'ACTION: COMPILE_480P'
+        }
+    
+    def _validate_parsed_sections(self, sections: Dict[str, List[str]]) -> bool:
+        """Validate that parsed sections contain reasonable content"""
+        # Check if we have at least some content
+        has_yaml = sections.get('YAML') and len(sections['YAML']) > 0
+        has_code = sections.get('CODE') and len(sections['CODE']) > 0
+        
+        # At minimum, we need either YAML with key indicators or reasonable CODE
+        if has_yaml:
+            yaml_text = '\n'.join(sections['YAML']).lower()
+            if any(key in yaml_text for key in ['topic:', 'scenes:', 'audience:']):
+                return True
+        
+        if has_code:
+            code_text = '\n'.join(sections['CODE'])
+            if 'class' in code_text and 'Scene' in code_text:
+                return True
+        
+        return False
 
 
 def create_builder_llm(api_key: str) -> BuilderLLM:
