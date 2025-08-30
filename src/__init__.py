@@ -1,1 +1,2 @@
-# Manim LLM Generator Package
+"""Unified OpenAI-based video generation package."""
+
