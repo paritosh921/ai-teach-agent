@@ -1,46 +1,40 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Root scripts: `unified_video_generator.py`, `book_to_video.py`, `enhanced_book_to_video.py`.
-- Source code: `src/` (key areas)
-  - `src/config/` YAML schemas and fix lists (e.g., `content_schema.yaml`).
-  - `src/schemas/` Python data schemas (book/poml/video).
-  - `src/codegen/` Manim code generation utilities.
-  - `src/autolayout/` layout safety, validators, scaling.
-  - `src/layout/` high‑level layout managers.
-  - Core modules: `orchestrator.py`, `llm_book_processor.py`, `manim_code_generator.py`, etc.
-- Assets: `books/` (input .txt). Generated: `output/`, `media/`, `temp/`, `test_output/`.
-- Env/config: `.env` (secrets), `requirements*.txt`.
+- `src/`: Core modules — `intelligent_chunker.py`, `openai_video_generator.py`, `manim_code_generator.py`, `unified_book_processor.py`.
+- `unified_video_generator.py`: Single entry point for the OpenAI‑based pipeline.
+- `books/`: Input sources (e.g., `calculus.txt`). Create if absent.
+- `output/unified/`: Generated artifacts (videos, blueprints); auto‑created.
+- `temp/`: Intermediate build files; safe to delete.
+- `.env`: Local secrets (see `env_template.txt`). Do not commit.
 
 ## Build, Test, and Development Commands
-- Install: `pip install -r requirements.txt` (or `requirements_enhanced.txt` for dev tools).
-- Configure: copy `env_template.txt` to `.env` and set `OPENAI_API_KEY=...`.
-- List books: `python unified_video_generator.py --list-books`.
-- Generate: `python unified_video_generator.py --book calculus --audience undergraduate`.
-- Smoke test: `python test_system.py`.
-- Unified tests: `python test_unified_system.py --all` (see script help for options).
+- Install: `pip install -r requirements.txt`
+- Configure env: `cp env_template.txt .env` then set `OPENAI_API_KEY`.
+- Run (book to video): `python unified_video_generator.py --book "calculus"`
+- List books: `python unified_video_generator.py --list-books`
+- Clean intermediates: remove `temp/` and `output/unified/` subfolders as needed.
 
 ## Coding Style & Naming Conventions
-- Language: Python 3.10+ recommended; 4‑space indentation.
-- Names: modules/functions `snake_case`, classes `PascalCase`, constants `UPPER_SNAKE_CASE`.
-- Type hints and short doctrings for public functions/classes.
-- Formatting: prefer Black; lint with Flake8 (available via `requirements_enhanced.txt`).
-- Keep modules small; place shared utilities under `src/codegen/`, schemas in `src/schemas/`.
+- Language: Python 3.8+; 4‑space indentation; prefer type hints and `@dataclass`.
+- Names: modules `snake_case.py`, functions/vars `snake_case`, classes `PascalCase`.
+- Imports: absolute from `src` when used as a path (see script’s path injection).
+- Docstrings: concise module/function docstrings (triple‑quoted) explaining intent.
+- Avoid one‑letter identifiers; keep functions focused and small.
 
 ## Testing Guidelines
-- Test scripts: `test_system.py` and `test_unified_system.py` (integration/E2E).
-- Create throwaway inputs under `test_output/books/`; outputs go to `test_output/`.
-- If adding unit tests, follow `test_*.py` pattern and avoid network unless mocked.
-- Aim to cover: chunking, layout safety, codegen structure, and failure paths.
+- Current repo has no formal test suite. If adding tests, prefer `pytest` with layout:
+  - `tests/test_chunker.py`, `tests/test_codegen.py`, etc.
+  - Fast unit tests for pure helpers; mark LLM/Manim integrations as slow.
+- Run: `pytest -q` (if added to requirements).
 
 ## Commit & Pull Request Guidelines
-- Commits: use Conventional Commits (feat, fix, refactor, test, chore).
-  Example: `feat(chunker): add audience-aware heuristics`.
-- PRs: include a clear description, linked issues, reproduction steps, and before/after notes (attach sample book and resulting outputs if visual).
-- Keep changes focused; update README or config references when paths or behaviors change.
+- Commits: imperative mood and scope, e.g., `chunker: refine fuzzy matching`.
+- Group related changes; keep diffs small; reference issues (`Fixes #123`).
+- PRs: include purpose, before/after behavior, reproduction steps, and sample inputs in `books/` if relevant.
+- For video changes, attach logs or paths from `output/unified/videos/` and note any layout fixes.
 
 ## Security & Configuration Tips
-- Never commit secrets; keep API keys in `.env` (gitignored).
-- Don’t commit generated `media/`, `output/`, or `test_output/` artifacts.
-- Prefer smaller sample books for tests; avoid sending proprietary text to APIs.
-
+- Secrets: keep API keys only in `.env`; never hard‑code or commit.
+- Large artifacts: do not commit files from `output/` or `temp/`.
+- Manim/ffmpeg: installed via requirements; system `ffmpeg` optional.

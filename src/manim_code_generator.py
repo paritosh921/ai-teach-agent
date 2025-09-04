@@ -190,6 +190,11 @@ class ManimCodeGenerator:
             (r"Text\(([^\)]*)size\s*=\s*\d+([^\)]*)\)", r"Text(\1\2)"),
             (r"(Write|Create)\(([^\)]*),\s*run_time\s*=\s*[^\)]*\)", r"\1(\2)"),
             (r"\.to_edge\(([^\)]*),\s*buff\s*=\s*[^\)]*\)", r".to_edge(\1)"),
+            # Replace external assets with simple placeholders
+            (r"SVGMobject\([^\)]*\)", r"Text('diagram', font_size=36)"),
+            (r"ImageMobject\([^\)]*\)", r"Text('image', font_size=36)"),
+            # Defensive: ensure Scene subclass exists
+            (r"class\s+(\w+)\s*\((?:MovingCamera)?Scene\)\s*:\s*pass", r"class \1(Scene):\n    def construct(self):\n        self.add(Text('Placeholder', font_size=36))"),
         ]
         for pat, rep in fixes:
             fixed = re.sub(pat, rep, fixed)
