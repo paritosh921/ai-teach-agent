@@ -231,10 +231,32 @@ class ManimCodeGenerator:
                 "right_title": "Summary",
                 "right": (tc.summary or "")[:400],
             })
+        # Equations if available
         if tc.formulas:
             eq_lines = [f.get('formula') if isinstance(f, dict) else str(f) for f in tc.formulas[:3]]
             slides.append({"type": "equation", "title": "Key Equations", "lines": [s for s in eq_lines if s]})
-        slides.append({"type": "figure", "title": "Diagram", "caption": tc.summary[:200] if tc.summary else ""})
+        # Heuristic visual slide based on content/topic (avoid random charts)
+        topic = (tc.title + " " + tc.content_chunk.content[:400]).lower()
+        if any(k in topic for k in ["velocity", "acceleration", "kinematic", "motion"]):
+            slides.append({
+                "type": "plot",
+                "title": "Velocity vs. Time",
+                "expr": "v0 + a*t",
+                "x_range": [0, 10, 0.1],
+                "y_range": [0, 50, 5]
+            })
+        elif any(k in topic for k in ["work", "energy", "power"]):
+            slides.append({
+                "type": "equation",
+                "title": "Work & Energy",
+                "lines": [r"W = \vec{F}\cdot\vec{d} = F d \cos\theta", r"E_k = \tfrac{1}{2} m v^2"]
+            })
+        elif any(k in topic for k in ["force", "free-body", "newton"]):
+            slides.append({
+                "type": "figure",
+                "title": "Free-Body Diagram",
+                "caption": (tc.summary or "")[:200]
+            })
         return slides
 
     def _render_slides_code(self, slides: List[Dict[str, Any]]) -> str:
@@ -417,9 +439,8 @@ class Video(Scene):
                 print(f"         ?? Applied fix (+/- {changed} lines). Snapshot: {snap_report_path}")
                 print(f"         ?? Log: {log_path} | Diff: {diff_path}")
                 continue
-            result.error_message = f"Could not fix compilation errors after {attempt} attempts"
-            if attempt == self.max_debug_attempts:
-                break
+            result.error_message = f"Could not auto-fix errors after attempt {attempt}; no code changes produced."
+            break
         result.error_message = result.error_message or f"Maximum debug attempts ({self.max_debug_attempts}) exceeded"
         return result
 
@@ -483,6 +504,8 @@ class Video(Scene):
 
     def _apply_fallback_fixes(self, code: str) -> str:
         fixed = code
+        # sanitize problematic LaTeX lines and common unicode
+        fixed = self._sanitize_equation_lines_in_code(fixed)
         # common small fixes
         fixes = [
             (r"Text\(([^\)]*)size\s*=\s*\d+([^\)]*)\)", r"Text(\1\2)"),
@@ -498,7 +521,62 @@ class Video(Scene):
         ]
         for pat, rep in fixes:
             fixed = re.sub(pat, rep, fixed)
+        # sanitize embedded plot expr literals if present
+        fixed = self._sanitize_plot_expr_literals(fixed)
         return fixed
+
+    def _sanitize_plot_expr_literals(self, code: str) -> str:
+        # Replace "expr": "..." values to safe forms: RHS only, caret to **, t->x, pi->np.pi
+        def repl(m: re.Match) -> str:
+            content = m.group(1)
+            s = content
+            if '=' in s:
+                s = s.split('=')[-1]
+            s = s.replace('^', '**')
+            s = re.sub(r"\bpi\b", "np.pi", s)
+            s = re.sub(r"\bt\b", "x", s)
+            # keep quotes
+            return f'"expr": "{s}"'
+        try:
+            return re.sub(r"\"expr\"\s*:\s*\"([^\"]*)\"", repl, code)
+        except Exception:
+            return code
+
+    def _sanitize_equation_lines_in_code(self, code: str) -> str:
+        # Replace suspicious characters and fix common physics latex tokens
+        def clean_line(s: str) -> str:
+            t = s
+            # fix half terms like weird chars → 1/2 a t^2
+            t = t.replace('½', r'\\tfrac{1}{2}')
+            t = t.replace('�at�', r'\\tfrac{1}{2} a t^{2}')
+            t = t.replace('�', '')
+            # subscripts
+            t = re.sub(r'\bv0\b', r'v_0', t)
+            t = re.sub(r'\bx0\b', r'x_0', t)
+            t = re.sub(r'\bt0\b', r't_0', t)
+            # minus variants
+            t = t.replace('–', '-')
+            t = t.replace('—', '-')
+            # strip other non-ascii chars
+            t = re.sub(r'[^\x00-\x7F]', '', t)
+            return t
+
+        try:
+            # pattern to find the equation slide lines arrays
+            def repl_block(m: re.Match) -> str:
+                full = m.group(0)
+                inside = m.group(1)
+                # replace each string literal inside the array
+                def repl_str(ms: re.Match) -> str:
+                    content = ms.group(1)
+                    return '"' + clean_line(content) + '"'
+                cleaned_inside = re.sub(r'"([^"\\]*)"', repl_str, inside)
+                return full.replace(inside, cleaned_inside)
+
+            pattern = r'"lines"\s*:\s*\[(.*?)\]'
+            return re.sub(pattern, repl_block, code, flags=re.DOTALL)
+        except Exception:
+            return code
 
     def _persist_log(self, output_name: str, attempt: int, log: str) -> str:
         reports = self.output_dir.parent / 'reports'

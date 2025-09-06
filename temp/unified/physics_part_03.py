@@ -11,11 +11,12 @@ Supported slide types:
 - bar: {"type":"bar","title": str, "labels":[str], "values":[number]}
 - figure: {"type":"figure","title": str, "caption": str}
 
-The generator injects a JSON list into [{"type": "title", "text": "Understanding Free Fall"}, {"type": "bullets", "title": "Objectives", "items": ["Understand the concept of free fall and its characteristics.", "Derive and apply the equations of motion for free fall.", "Visualize the linear and quadratic relationships in free fall."]}, {"type": "two_column", "left_title": "Key Concept", "left": "Free Fall", "right_title": "Definition", "right": "Motion under the influence of gravity alone, with constant acceleration of -9.8 m/s² on Earth."}, {"type": "two_column", "left_title": "Key Concept", "left": "Constant Acceleration", "right_title": "Definition", "right": "A steady increase in velocity over time, characteristic of free fall."}, {"type": "equation", "title": "Time of Fall", "lines": ["t = \\sqrt{\\frac{2h}{g}}"]}, {"type": "equation", "title": "Final Velocity", "lines": ["v = \\sqrt{2gh}"]}, {"type": "plot", "title": "Velocity vs. Time", "expr": "9.8*x", "x_range": [0, 10, 0.1], "y_range": [0, 100, 10]}, {"type": "plot", "title": "Height vs. Time", "expr": "-4.9*x**2", "x_range": [0, 10, 0.1], "y_range": [-500, 0, 50]}, {"type": "bar", "title": "Comparison of Heights", "labels": ["1s", "2s", "3s"], "values": [4.9, 19.6, 44.1]}, {"type": "figure", "title": "Free Fall Experiment", "caption": "Illustration of an object in free fall, showing the effects of gravity."}, {"type": "bullets", "title": "Summary", "items": ["Free fall is a fundamental concept in physics.", "Illustrates how gravity influences motion.", "Understanding linear and quadratic relationships in free fall."]}] at build time.
+The generator injects a JSON list into [{"type": "title", "text": "Understanding Free Fall: A Special Case of Motion"}, {"type": "bullets", "title": "Objectives", "items": ["Understand free fall as motion with constant acceleration.", "Derive key equations for free-falling objects.", "Visualize velocity and distance relationships in free fall."]}, {"type": "two_column", "left_title": "Free Fall", "left": "Motion under gravitational acceleration only.", "right_title": "Gravitational Acceleration", "right": "Acceleration due to Earth's gravity, approx. -9.8 m/s²."}, {"type": "equation", "title": "Key Equations", "lines": ["t = \\sqrt{\\frac{2h}{g}}", "v = \\sqrt{2gh}"]}, {"type": "plot", "title": "Velocity vs. Time", "expr": "v = -9.8*t", "x_range": [0, 10, 0.1], "y_range": [-100, 0, 10]}, {"type": "plot", "title": "Distance vs. Time", "expr": "d = 0.5*-9.8*t**2", "x_range": [0, 10, 0.1], "y_range": [0, 500, 50]}, {"type": "bar", "title": "Gravitational Acceleration on Different Planets", "labels": ["Earth", "Moon", "Mars"], "values": [9.8, 1.6, 3.7]}, {"type": "figure", "title": "Free Fall Illustration", "caption": "An object in free fall experiences constant acceleration due to gravity."}, {"type": "bullets", "title": "Summary", "items": ["Free fall illustrates motion under constant gravity.", "Velocity and distance show linear and quadratic time relationships."]}] at build time.
 """
 
 from manim import *
 import numpy as np
+import re
 
 # ---------- layout primitives ----------
 SAFE_MARGIN = 0.6
@@ -68,6 +69,51 @@ def center_in(group: Mobject, region: Mobject):
     return group
 
 
+def clamp_inside_scene(scene: Scene, m: Mobject, pad: float = 0.02) -> None:
+    """Ensure m is fully inside the safe area by scaling (if needed) and shifting.
+
+    This is a last-resort guard against any residual drift from animations or rounding.
+    """
+    safe = safe_rect(scene)
+    # Scale to not exceed safe rect
+    max_w = max(0.1, safe.width - 2 * pad)
+    max_h = max(0.1, safe.height - 2 * pad)
+    if m.width > max_w or m.height > max_h:
+        m.scale(min(max_w / max(m.width, 1e-6), max_h / max(m.height, 1e-6)))
+    # Shift into bounds
+    left_bound = safe.get_left()[0] + pad
+    right_bound = safe.get_right()[0] - pad
+    bottom_bound = safe.get_bottom()[1] + pad
+    top_bound = safe.get_top()[1] - pad
+    dx = 0.0
+    dy = 0.0
+    left = m.get_left()[0]
+    right = m.get_right()[0]
+    bottom = m.get_bottom()[1]
+    top = m.get_top()[1]
+    if left < left_bound and right <= right_bound:
+        dx = left_bound - left
+    elif right > right_bound and left >= left_bound:
+        dx = right_bound - right
+    # If both out, width > safe; we already scaled, so recompute and clamp center
+    left = m.get_left()[0]; right = m.get_right()[0]
+    if left < left_bound:
+        dx = max(dx, left_bound - left)
+    if right > right_bound:
+        dx = min(dx, right_bound - right)
+    if bottom < bottom_bound and top <= top_bound:
+        dy = bottom_bound - bottom
+    elif top > top_bound and bottom >= bottom_bound:
+        dy = top_bound - top
+    bottom = m.get_bottom()[1]; top = m.get_top()[1]
+    if bottom < bottom_bound:
+        dy = max(dy, bottom_bound - bottom)
+    if top > top_bound:
+        dy = min(dy, top_bound - top)
+    if abs(dx) > 1e-6 or abs(dy) > 1e-6:
+        m.shift(np.array([dx, dy, 0.0]))
+
+
 def make_panel(scene, tl, br, rows=12, cols=12):
     # tl, br in grid coords (0..rows-1, 0..cols-1), inclusive
     root = safe_rect(scene)
@@ -100,6 +146,7 @@ def build_title(scene, text):
     scale_to_fit(best, region, pad=0.02)
     center_in(best, region)
     scene.play(FadeIn(best, shift=UP))
+    clamp_inside_scene(scene, best)
     return best
 
 
@@ -111,6 +158,7 @@ def build_bullets(scene, title, items, min_font=30):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
 
     # Bullets with pagination if needed
     pages = []
@@ -144,6 +192,7 @@ def build_bullets(scene, title, items, min_font=30):
         scale_to_fit(g, b_reg, pad=0.05)
         g.move_to(b_reg.get_left() + RIGHT * 0.1)
         scene.play(FadeIn(g, shift=RIGHT))
+        clamp_inside_scene(scene, g)
         scene.wait(0.6)
         if idx < len(pages) - 1:
             scene.play(FadeOut(g))
@@ -163,6 +212,8 @@ def build_two_col(scene, left_title, left_text, right_title, right_text):
     scale_to_fit(r, r_reg, pad=0.05)
     center_in(r, r_reg)
     scene.play(FadeIn(l, shift=LEFT), FadeIn(r, shift=RIGHT))
+    clamp_inside_scene(scene, l)
+    clamp_inside_scene(scene, r)
 
 
 def build_equation(scene, title, latex_lines):
@@ -172,11 +223,19 @@ def build_equation(scene, title, latex_lines):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
-    rows = VGroup(*[MathTex(s).scale(1.0) for s in (latex_lines or [])]).arrange(DOWN, buff=0.6)
+    clamp_inside_scene(scene, t)
+    objs = []
+    for s in (latex_lines or []):
+        try:
+            objs.append(MathTex(s).scale(1.0))
+        except Exception:
+            objs.append(Text(s, font_size=36))
+    rows = VGroup(*objs).arrange(DOWN, buff=0.6)
     scale_to_fit(rows, e_reg, pad=0.15)
     center_in(rows, e_reg)
     for r in rows:
         scene.play(Write(r))
+        clamp_inside_scene(scene, r)
         scene.wait(0.3)
 
 
@@ -187,17 +246,48 @@ def build_plot(scene, title, expr, x_range=(-5, 5, 1), y_range=(-3, 3, 1)):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     axes = Axes(x_range=x_range, y_range=y_range, axis_config={"include_numbers": True})
     scale_to_fit(axes, p_reg, pad=0.2)
     center_in(axes, p_reg)
     scene.play(Create(axes))
+    clamp_inside_scene(scene, axes)
     allowed = {k: getattr(np, k) for k in [
         "sin", "cos", "tan", "exp", "log", "sqrt", "abs", "arctan", "arcsin", "arccos"
     ]}
+    # Support constants, symbols, and numpy namespace
+    allowed.update({
+        "pi": np.pi, "e": np.e, "np": np,
+        # default physical constants/symbols used in expressions
+        "g": 9.8,  # gravity magnitude
+        "a": 1.0,  # default acceleration
+        "v0": 0.0, "k": 1.0, "b": 1.0, "m": 1.0, "c": 1.0
+    })
+
+    def normalize_expr(s: str) -> str:
+        s = str(s or "").strip()
+        # Take RHS of assignment if present
+        if "=" in s:
+            s = s.split("=")[-1]
+        # caret power to python power
+        s = s.replace("^", "**")
+        # pi constant
+        s = re.sub(r"\bpi\b", "np.pi", s)
+        # unify variable name to x
+        s = re.sub(r"\bt\b", "x", s)
+        return s
+
+    expr = normalize_expr(expr)
     def f(x):
-        return eval(expr, {"__builtins__": {}}, dict(allowed, x=x))
+        try:
+            return eval(expr, {"__builtins__": {}}, dict(allowed, x=x))
+        except Exception:
+            # Fallback to a simple sine if expression is invalid
+            return np.sin(x)
     graph = axes.plot(lambda x: f(x), x_range=(x_range[0], x_range[1]))
+    grp = VGroup(axes, graph)
     scene.play(Create(graph))
+    clamp_inside_scene(scene, grp)
     scene.wait(0.6)
 
 
@@ -208,10 +298,12 @@ def build_bar(scene, title, labels, values):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     chart = BarChart(values=values, bar_names=labels, y_range=[0, max(values) * 1.2, max(1, int(max(values) // 5))])
     scale_to_fit(chart, c_reg, pad=0.2)
     center_in(chart, c_reg)
     scene.play(Create(chart))
+    clamp_inside_scene(scene, chart)
     scene.wait(0.6)
 
 
@@ -223,24 +315,27 @@ def build_figure(scene, title, caption=""):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     plane = NumberPlane(x_range=[-4, 4, 1], y_range=[-3, 3, 1])
     vec = Arrow(start=plane.c2p(0, 0), end=plane.c2p(2, 1), buff=0)
     grp = VGroup(plane, vec)
     scale_to_fit(grp, f_reg, pad=0.2)
     center_in(grp, f_reg)
     scene.play(Create(grp))
+    clamp_inside_scene(scene, grp)
     if caption:
         cap = autowrap_to_width(caption, max_w=c_reg.width * 0.98, font_size=32, align=LEFT)
         scale_to_fit(cap, c_reg, pad=0.05)
         center_in(cap, c_reg)
         scene.play(FadeIn(cap, shift=UP))
+        clamp_inside_scene(scene, cap)
     scene.wait(0.6)
 
 
 # ---------- SCENE ----------
 class Lesson(Scene):
     def construct(self):
-        slides = [{"type": "title", "text": "Understanding Free Fall"}, {"type": "bullets", "title": "Objectives", "items": ["Understand the concept of free fall and its characteristics.", "Derive and apply the equations of motion for free fall.", "Visualize the linear and quadratic relationships in free fall."]}, {"type": "two_column", "left_title": "Key Concept", "left": "Free Fall", "right_title": "Definition", "right": "Motion under the influence of gravity alone, with constant acceleration of -9.8 m/s² on Earth."}, {"type": "two_column", "left_title": "Key Concept", "left": "Constant Acceleration", "right_title": "Definition", "right": "A steady increase in velocity over time, characteristic of free fall."}, {"type": "equation", "title": "Time of Fall", "lines": ["t = \\sqrt{\\frac{2h}{g}}"]}, {"type": "equation", "title": "Final Velocity", "lines": ["v = \\sqrt{2gh}"]}, {"type": "plot", "title": "Velocity vs. Time", "expr": "9.8*x", "x_range": [0, 10, 0.1], "y_range": [0, 100, 10]}, {"type": "plot", "title": "Height vs. Time", "expr": "-4.9*x**2", "x_range": [0, 10, 0.1], "y_range": [-500, 0, 50]}, {"type": "bar", "title": "Comparison of Heights", "labels": ["1s", "2s", "3s"], "values": [4.9, 19.6, 44.1]}, {"type": "figure", "title": "Free Fall Experiment", "caption": "Illustration of an object in free fall, showing the effects of gravity."}, {"type": "bullets", "title": "Summary", "items": ["Free fall is a fundamental concept in physics.", "Illustrates how gravity influences motion.", "Understanding linear and quadratic relationships in free fall."]}]  # list[dict] injected by generator
+        slides = [{"type": "title", "text": "Understanding Free Fall: A Special Case of Motion"}, {"type": "bullets", "title": "Objectives", "items": ["Understand free fall as motion with constant acceleration.", "Derive key equations for free-falling objects.", "Visualize velocity and distance relationships in free fall."]}, {"type": "two_column", "left_title": "Free Fall", "left": "Motion under gravitational acceleration only.", "right_title": "Gravitational Acceleration", "right": "Acceleration due to Earth's gravity, approx. -9.8 m/s²."}, {"type": "equation", "title": "Key Equations", "lines": ["t = \\sqrt{\\frac{2h}{g}}", "v = \\sqrt{2gh}"]}, {"type": "plot", "title": "Velocity vs. Time", "expr": "v = -9.8*t", "x_range": [0, 10, 0.1], "y_range": [-100, 0, 10]}, {"type": "plot", "title": "Distance vs. Time", "expr": "d = 0.5*-9.8*t**2", "x_range": [0, 10, 0.1], "y_range": [0, 500, 50]}, {"type": "bar", "title": "Gravitational Acceleration on Different Planets", "labels": ["Earth", "Moon", "Mars"], "values": [9.8, 1.6, 3.7]}, {"type": "figure", "title": "Free Fall Illustration", "caption": "An object in free fall experiences constant acceleration due to gravity."}, {"type": "bullets", "title": "Summary", "items": ["Free fall illustrates motion under constant gravity.", "Velocity and distance show linear and quadratic time relationships."]}]  # list[dict] injected by generator
 
         # Title slide if present
         if slides and slides[0].get("type") == "title":
@@ -282,4 +377,3 @@ class Lesson(Scene):
             # clear for next slide
             self.play(*[FadeOut(m) for m in list(self.mobjects)])
             self.wait(0.2)
-

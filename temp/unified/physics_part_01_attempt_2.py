@@ -52,6 +52,51 @@ def center_in(group: Mobject, region: Mobject):
     return group
 
 
+def clamp_inside_scene(scene: Scene, m: Mobject, pad: float = 0.02) -> None:
+    """Ensure m is fully inside the safe area by scaling (if needed) and shifting.
+
+    This is a last-resort guard against any residual drift from animations or rounding.
+    """
+    safe = safe_rect(scene)
+    # Scale to not exceed safe rect
+    max_w = max(0.1, safe.width - 2 * pad)
+    max_h = max(0.1, safe.height - 2 * pad)
+    if m.width > max_w or m.height > max_h:
+        m.scale(min(max_w / max(m.width, 1e-6), max_h / max(m.height, 1e-6)))
+    # Shift into bounds
+    left_bound = safe.get_left()[0] + pad
+    right_bound = safe.get_right()[0] - pad
+    bottom_bound = safe.get_bottom()[1] + pad
+    top_bound = safe.get_top()[1] - pad
+    dx = 0.0
+    dy = 0.0
+    left = m.get_left()[0]
+    right = m.get_right()[0]
+    bottom = m.get_bottom()[1]
+    top = m.get_top()[1]
+    if left < left_bound and right <= right_bound:
+        dx = left_bound - left
+    elif right > right_bound and left >= left_bound:
+        dx = right_bound - right
+    # If both out, width > safe; we already scaled, so recompute and clamp center
+    left = m.get_left()[0]; right = m.get_right()[0]
+    if left < left_bound:
+        dx = max(dx, left_bound - left)
+    if right > right_bound:
+        dx = min(dx, right_bound - right)
+    if bottom < bottom_bound and top <= top_bound:
+        dy = bottom_bound - bottom
+    elif top > top_bound and bottom >= bottom_bound:
+        dy = top_bound - top
+    bottom = m.get_bottom()[1]; top = m.get_top()[1]
+    if bottom < bottom_bound:
+        dy = max(dy, bottom_bound - bottom)
+    if top > top_bound:
+        dy = min(dy, top_bound - top)
+    if abs(dx) > 1e-6 or abs(dy) > 1e-6:
+        m.shift(np.array([dx, dy, 0.0]))
+
+
 def make_panel(scene, tl, br, rows=12, cols=12):
     # tl, br in grid coords (0..rows-1, 0..cols-1), inclusive
     root = safe_rect(scene)
@@ -84,6 +129,7 @@ def build_title(scene, text):
     scale_to_fit(best, region, pad=0.02)
     center_in(best, region)
     scene.play(FadeIn(best, shift=UP))
+    clamp_inside_scene(scene, best)
     return best
 
 
@@ -95,6 +141,7 @@ def build_bullets(scene, title, items, min_font=30):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
 
     # Bullets with pagination if needed
     pages = []
@@ -128,6 +175,7 @@ def build_bullets(scene, title, items, min_font=30):
         scale_to_fit(g, b_reg, pad=0.05)
         g.move_to(b_reg.get_left() + RIGHT * 0.1)
         scene.play(FadeIn(g, shift=RIGHT))
+        clamp_inside_scene(scene, g)
         scene.wait(0.6)
         if idx < len(pages) - 1:
             scene.play(FadeOut(g))
@@ -147,6 +195,8 @@ def build_two_col(scene, left_title, left_text, right_title, right_text):
     scale_to_fit(r, r_reg, pad=0.05)
     center_in(r, r_reg)
     scene.play(FadeIn(l, shift=LEFT), FadeIn(r, shift=RIGHT))
+    clamp_inside_scene(scene, l)
+    clamp_inside_scene(scene, r)
 
 
 def build_equation(scene, title, latex_lines):
@@ -156,11 +206,13 @@ def build_equation(scene, title, latex_lines):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     rows = VGroup(*[MathTex(s).scale(1.0) for s in (latex_lines or [])]).arrange(DOWN, buff=0.6)
     scale_to_fit(rows, e_reg, pad=0.15)
     center_in(rows, e_reg)
     for r in rows:
         scene.play(Write(r))
+        clamp_inside_scene(scene, r)
         scene.wait(0.3)
 
 
@@ -171,17 +223,21 @@ def build_plot(scene, title, expr, x_range=(-5, 5, 1), y_range=(-3, 3, 1)):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     axes = Axes(x_range=x_range, y_range=y_range, axis_config={"include_numbers": True})
     scale_to_fit(axes, p_reg, pad=0.2)
     center_in(axes, p_reg)
     scene.play(Create(axes))
+    clamp_inside_scene(scene, axes)
     allowed = {k: getattr(np, k) for k in [
         "sin", "cos", "tan", "exp", "log", "sqrt", "abs", "arctan", "arcsin", "arccos"
     ]}
     def f(x):
         return eval(expr, {"__builtins__": {}}, dict(allowed, x=x))
     graph = axes.plot(lambda x: f(x), x_range=(x_range[0], x_range[1]))
+    grp = VGroup(axes, graph)
     scene.play(Create(graph))
+    clamp_inside_scene(scene, grp)
     scene.wait(0.6)
 
 
@@ -192,10 +248,12 @@ def build_bar(scene, title, labels, values):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     chart = BarChart(values=values, bar_names=labels, y_range=[0, max(values) * 1.2, max(1, int(max(values) // 5))])
     scale_to_fit(chart, c_reg, pad=0.2)
     center_in(chart, c_reg)
     scene.play(Create(chart))
+    clamp_inside_scene(scene, chart)
     scene.wait(0.6)
 
 
@@ -207,62 +265,24 @@ def build_figure(scene, title, caption=""):
     scale_to_fit(t, t_reg, pad=0.05)
     center_in(t, t_reg)
     scene.play(Write(t))
+    clamp_inside_scene(scene, t)
     plane = NumberPlane(x_range=[-4, 4, 1], y_range=[-3, 3, 1])
     vec = Arrow(start=plane.c2p(0, 0), end=plane.c2p(2, 1), buff=0)
     grp = VGroup(plane, vec)
     scale_to_fit(grp, f_reg, pad=0.2)
     center_in(grp, f_reg)
     scene.play(Create(grp))
+    clamp_inside_scene(scene, grp)
     if caption:
         cap = autowrap_to_width(caption, max_w=c_reg.width * 0.98, font_size=32, align=LEFT)
         scale_to_fit(cap, c_reg, pad=0.05)
         center_in(cap, c_reg)
         scene.play(FadeIn(cap, shift=UP))
+        clamp_inside_scene(scene, cap)
     scene.wait(0.6)
 
 
 # ---------- SCENE ----------
 class Lesson(Scene):
     def construct(self):
-        slides = [{"type": "title", "text": "Introduction to Motion: Position, Velocity, and Acceleration"}, {"type": "bullets", "title": "Objectives", "items": ["Define and differentiate between position, velocity, and acceleration.", "Understand and calculate average and instantaneous velocity.", "Visualize motion through graphs and diagrams."]}, {"type": "two_column", "left_title": "Position", "left": "The location of an object relative to a reference point, which can be positive or negative.", "right_title": "Velocity", "right": "The rate of change of position with respect to time, indicating how fast an object moves and in which direction."}, {"type": "two_column", "left_title": "Acceleration", "left": "The rate of change of velocity with respect to time, showing how quickly an object speeds up or slows down.", "right_title": "Key Concept", "right": "Understanding acceleration helps in predicting motion."}, {"type": "equation", "title": "Average Velocity Formula", "lines": ["v_{avg} = \\frac{\\Delta x}{\\Delta t}"]}, {"type": "equation", "title": "Instantaneous Velocity Formula", "lines": ["v_{inst} = \\frac{dx}{dt}"]}, {"type": "plot", "title": "Velocity vs. Time Graph", "expr": "v = 3*t + 2", "x_range": [0, 10, 0.1], "y_range": [0, 40, 1]}, {"type": "bar", "title": "Comparison of Concepts", "labels": ["Position", "Velocity", "Acceleration"], "values": [1, 2, 3]}, {"type": "figure", "title": "Motion Diagram", "caption": "A diagram illustrating the motion of an object over time."}, {"type": "bullets", "title": "Summary", "items": ["Position, velocity, and acceleration are foundational concepts in physics.", "Understanding these concepts helps analyze and predict motion."]}]  # list[dict] injected by generator
-
-        # Title slide if present
-        if slides and slides[0].get("type") == "title":
-            build_title(self, slides[0].get("text", ""))
-            self.wait(0.6)
-            slides = slides[1:]
-
-        # Content slides
-        for s in slides:
-            t = s.get("type")
-            if t == "bullets":
-                build_bullets(self, s.get("title", ""), s.get("items", []))
-            elif t == "two_column":
-                build_two_col(
-                    self,
-                    s.get("left_title", ""),
-                    s.get("left", ""),
-                    s.get("right_title", ""),
-                    s.get("right", ""),
-                )
-            elif t == "equation":
-                build_equation(self, s.get("title", "Derivation"), s.get("lines", []))
-            elif t == "plot":
-                build_plot(
-                    self,
-                    s.get("title", "Plot"),
-                    s.get("expr", "np.sin(x)"),
-                    tuple(s.get("x_range", [-5, 5, 1])),
-                    tuple(s.get("y_range", [-3, 3, 1])),
-                )
-            elif t == "bar":
-                build_bar(self, s.get("title", "Chart"), s.get("labels", []), s.get("values", []))
-            elif t == "figure":
-                build_figure(self, s.get("title", "Figure"), s.get("caption", ""))
-            else:
-                # fallback bullet slide
-                build_bullets(self, s.get("title", ""), s.get("items", []))
-            self.wait(0.4)
-            # clear for next slide
-            self.play(*[FadeOut(m) for m in list(self.mobjects)])
-            self
+        slides = [{"type": "title", "text": "Introduction to Motion: Position, Velocity, and Acceleration"}, {"type": "bullets", "title": "Objectives", "items": ["Understand position as a reference point.", "Differentiate average and instantaneous velocity.", "Comprehend acceleration as velocity change rate.", "Solve basic motion problems."]}, {"type": "two_column", "left_title": "Position", "left": "Location relative to a reference point.", "right_title": "Velocity", "right": "Rate of position change over time."}, {"type": "bullets", "title": "Key Concepts", "items": ["Position: Location relative to a reference point.", "Velocity: Position change rate with direction.", "Acceleration: Velocity change rate."]}, {"type": "equation", "title": "Average Velocity",

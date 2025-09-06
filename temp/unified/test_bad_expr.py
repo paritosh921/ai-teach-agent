@@ -11,7 +11,27 @@ Supported slide types:
 - bar: {"type":"bar","title": str, "labels":[str], "values":[number]}
 - figure: {"type":"figure","title": str, "caption": str}
 
-The generator injects a JSON list into [{"type": "title", "text": "Introduction to Motion: Position, Velocity, and Acceleration"}, {"type": "bullets", "title": "Objectives", "items": ["Understand the concept of position and its representation in a coordinate system.", "Differentiate between average and instantaneous velocity.", "Comprehend acceleration as the rate of change of velocity.", "Apply these concepts to solve basic motion problems."]}, {"type": "two_column", "left_title": "Position (x)", "left": "The location of an object relative to a reference point, which can be positive or negative based on the coordinate system.", "right_title": "Velocity (v)", "right": "The rate of change of position with respect to time, indicating how fast an object is moving and in which direction."}, {"type": "two_column", "left_title": "Velocity (v)", "left": "The rate of change of position with respect to time, indicating how fast an object is moving and in which direction.", "right_title": "Acceleration (a)", "right": "The rate of change of velocity with respect to time, describing how quickly an object speeds up or slows down."}, {"type": "equation", "title": "Average Velocity Formula", "lines": ["v_{avg} = \\frac{\\Delta x}{\\Delta t}"]}, {"type": "equation", "title": "Acceleration Formula", "lines": ["a = \\frac{\\Delta v}{\\Delta t}"]}, {"type": "plot", "title": "Position vs. Time", "expr": "x = 5*t", "x_range": [0, 10, 0.1], "y_range": [0, 50, 5]}, {"type": "bar", "title": "Velocity Comparison", "labels": ["Instantaneous", "Average"], "values": [15, 10]}, {"type": "figure", "title": "Acceleration Example", "caption": "Illustration of an object accelerating over time."}, {"type": "bullets", "title": "Summary", "items": ["Explored the fundamental concepts of motion: position, velocity, and acceleration.", "Described and predicted the motion of objects in one dimension."]}] at build time.
+The generator injects a JSON list into [
+  {
+    "text": "Plot Expr Sanitization",
+    "type": "title"
+  },
+  {
+    "expr": "v = 2*t + 3",
+    "y_range": [
+      -10,
+      10,
+      2
+    ],
+    "title": "Velocity vs Time",
+    "x_range": [
+      -5,
+      5,
+      1
+    ],
+    "type": "plot"
+  }
+] at build time.
 """
 
 from manim import *
@@ -255,14 +275,8 @@ def build_plot(scene, title, expr, x_range=(-5, 5, 1), y_range=(-3, 3, 1)):
     allowed = {k: getattr(np, k) for k in [
         "sin", "cos", "tan", "exp", "log", "sqrt", "abs", "arctan", "arcsin", "arccos"
     ]}
-    # Support constants, symbols, and numpy namespace
-    allowed.update({
-        "pi": np.pi, "e": np.e, "np": np,
-        # default physical constants/symbols used in expressions
-        "g": 9.8,  # gravity magnitude
-        "a": 1.0,  # default acceleration
-        "v0": 0.0, "k": 1.0, "b": 1.0, "m": 1.0, "c": 1.0
-    })
+    # Support constants and numpy namespace
+    allowed.update({"pi": np.pi, "e": np.e, "np": np})
 
     def normalize_expr(s: str) -> str:
         s = str(s or "").strip()
@@ -335,7 +349,27 @@ def build_figure(scene, title, caption=""):
 # ---------- SCENE ----------
 class Lesson(Scene):
     def construct(self):
-        slides = [{"type": "title", "text": "Introduction to Motion: Position, Velocity, and Acceleration"}, {"type": "bullets", "title": "Objectives", "items": ["Understand the concept of position and its representation in a coordinate system.", "Differentiate between average and instantaneous velocity.", "Comprehend acceleration as the rate of change of velocity.", "Apply these concepts to solve basic motion problems."]}, {"type": "two_column", "left_title": "Position (x)", "left": "The location of an object relative to a reference point, which can be positive or negative based on the coordinate system.", "right_title": "Velocity (v)", "right": "The rate of change of position with respect to time, indicating how fast an object is moving and in which direction."}, {"type": "two_column", "left_title": "Velocity (v)", "left": "The rate of change of position with respect to time, indicating how fast an object is moving and in which direction.", "right_title": "Acceleration (a)", "right": "The rate of change of velocity with respect to time, describing how quickly an object speeds up or slows down."}, {"type": "equation", "title": "Average Velocity Formula", "lines": ["v_{avg} = \\frac{\\Delta x}{\\Delta t}"]}, {"type": "equation", "title": "Acceleration Formula", "lines": ["a = \\frac{\\Delta v}{\\Delta t}"]}, {"type": "plot", "title": "Position vs. Time", "expr": "x = 5*t", "x_range": [0, 10, 0.1], "y_range": [0, 50, 5]}, {"type": "bar", "title": "Velocity Comparison", "labels": ["Instantaneous", "Average"], "values": [15, 10]}, {"type": "figure", "title": "Acceleration Example", "caption": "Illustration of an object accelerating over time."}, {"type": "bullets", "title": "Summary", "items": ["Explored the fundamental concepts of motion: position, velocity, and acceleration.", "Described and predicted the motion of objects in one dimension."]}]  # list[dict] injected by generator
+        slides = [
+  {
+    "text": "Plot Expr Sanitization",
+    "type": "title"
+  },
+  {
+    "expr": "v = 2*t + 3",
+    "y_range": [
+      -10,
+      10,
+      2
+    ],
+    "title": "Velocity vs Time",
+    "x_range": [
+      -5,
+      5,
+      1
+    ],
+    "type": "plot"
+  }
+]  # list[dict] injected by generator
 
         # Title slide if present
         if slides and slides[0].get("type") == "title":
@@ -377,3 +411,4 @@ class Lesson(Scene):
             # clear for next slide
             self.play(*[FadeOut(m) for m in list(self.mobjects)])
             self.wait(0.2)
+
