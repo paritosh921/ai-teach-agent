@@ -1,111 +1,18 @@
+
 from manim import *
-import random, numpy as np
-random.seed(42); np.random.seed(42)
+import json
+import sys
+from pathlib import Path
 
-class IntroductionToChemicalBonding(Scene):
+# Ensure repo root is importable for src.* modules
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.structured_renderer import render_video
+
+BLUEPRINT = json.loads('{"title": "Introduction to Chemical Bonding", "slides": [{"title": "Introduction to Chemical Bonding", "bullets": ["Understand the Kössel–Lewis approach to chemical bonding", "Identify the role of valence electrons in bonding", "Differentiate between ionic and covalent bonds", "Recognize the stability of noble gases and its influence on bonding theories"], "formulas": ["Lewis Dot Structure"]}, {"title": "Valence Electrons", "bullets": ["Valence Electrons", "Electrons in the outermost shell of an atom that are involved in forming bonds."], "formulas": ["Lewis Dot Structure"]}, {"title": "Noble Gases", "bullets": ["Noble Gases", "Elements with full valence shells, exhibiting minimal reactivity."], "formulas": ["Lewis Dot Structure"]}, {"title": "Ionic Bond", "bullets": ["Ionic Bond", "A chemical bond formed through the transfer of electrons from one atom to another."], "formulas": ["Lewis Dot Structure"]}, {"title": "Covalent Bond", "bullets": ["Covalent Bond", "A chemical bond formed by the sharing of electron pairs between atoms."], "formulas": ["Lewis Dot Structure"]}, {"title": "Formation of NaCl", "bullets": ["Sodium (Na) transfers one electron to Chlorine (Cl), forming an ionic bond.", "Na becomes Na⁺ and Cl becomes Cl⁻, resulting in NaCl."], "formulas": []}, {"title": "Formation of H2O", "bullets": ["Oxygen shares electrons with two hydrogen atoms, forming covalent bonds to create a water molecule."], "formulas": []}, {"title": "Kössel–Lewis Approach", "bullets": ["Walter Kössel and Gilbert N.", "Lewis independently proposed that atoms achieve stability by attaining a noble gas electron configuration, either by transferring or sharing electrons."], "formulas": []}, {"title": "Noble Gas Stability", "bullets": ["Noble gases are chemically inert due to their full valence electron shells, serving as a model for understanding atomic stability in bonding."], "formulas": []}], "meta": {"audience": "undergraduate", "estimated_duration": 10, "difficulty": "intermediate"}}')
+
+class Video(Scene):
     def construct(self):
-        # Title
-        title = Text("Introduction to Chemical Bonding", font_size=48)
-        self.play(Write(title))
-        self.wait(2)
-        self.play(FadeOut(title))
-
-        # Timeline of Key Historical Developments
-        timeline = VGroup(
-            Text("1897: Discovery of Electron", font_size=32),
-            Text("1911: Rutherford's Nuclear Model", font_size=32),
-            Text("1913: Bohr's Model", font_size=32),
-            Text("1916: Kössell–Lewis Approach", font_size=32)
-        ).arrange(DOWN, buff=0.5).to_edge(LEFT, buff=1)
-
-        timeline_line = Line(timeline.get_top(), timeline.get_bottom(), color=BLUE)
-        self.play(Create(timeline_line))
-        for event in timeline:
-            self.play(FadeIn(event, shift=RIGHT))
-            self.wait(1)
-        self.wait(2)
-        self.play(FadeOut(timeline), FadeOut(timeline_line))
-
-        # Bohr and Rutherford Models
-        rutherford_model = VGroup(
-            Circle(radius=1, color=WHITE),
-            Dot(color=YELLOW).move_to(ORIGIN),
-            Text("Nucleus", font_size=32).next_to(ORIGIN, DOWN)
-        ).to_edge(LEFT, buff=1)
-
-        bohr_model = VGroup(
-            Circle(radius=1, color=WHITE),
-            Circle(radius=1.5, color=WHITE),
-            Dot(color=YELLOW).move_to(ORIGIN),
-            Dot(color=RED).move_to([1.5, 0, 0]),
-            Text("Electron", font_size=32).next_to([1.5, 0, 0], RIGHT),
-            Text("Nucleus", font_size=32).next_to(ORIGIN, DOWN)
-        ).to_edge(RIGHT, buff=1)
-
-        self.play(Create(rutherford_model))
-        self.wait(1)
-        self.play(Transform(rutherford_model, bohr_model))
-        self.wait(2)
-        self.play(FadeOut(rutherford_model))
-
-        # Ionic Bonding: Electron Transfer
-        sodium = Circle(radius=0.5, color=BLUE).shift(LEFT * 2)
-        chlorine = Circle(radius=0.5, color=GREEN).shift(RIGHT * 2)
-        electron = Dot(color=RED).move_to(sodium.get_center())
-        arrow = Arrow(sodium.get_center(), chlorine.get_center(), buff=0.5)
-
-        self.play(Create(sodium), Create(chlorine), Create(electron))
-        self.wait(1)
-        self.play(MoveAlongPath(electron, arrow), Create(arrow))
-        self.wait(1)
-        self.play(FadeOut(sodium), FadeOut(chlorine), FadeOut(electron), FadeOut(arrow))
-
-        # Covalent Bonding: Shared Electron Pairs
-        oxygen = Circle(radius=0.5, color=BLUE).shift(LEFT * 2)
-        hydrogen1 = Circle(radius=0.3, color=GREEN).shift(RIGHT * 1.5 + UP * 0.5)
-        hydrogen2 = Circle(radius=0.3, color=GREEN).shift(RIGHT * 1.5 + DOWN * 0.5)
-        shared_electrons = VGroup(
-            Dot(color=RED).move_to(oxygen.get_center() + RIGHT * 0.5),
-            Dot(color=RED).move_to(hydrogen1.get_center() + LEFT * 0.3),
-            Dot(color=RED).move_to(hydrogen2.get_center() + LEFT * 0.3)
-        )
-
-        self.play(Create(oxygen), Create(hydrogen1), Create(hydrogen2))
-        self.wait(1)
-        self.play(Create(shared_electrons))
-        self.wait(2)
-        self.play(FadeOut(oxygen), FadeOut(hydrogen1), FadeOut(hydrogen2), FadeOut(shared_electrons))
-
-        # Octet Rule and Stability
-        noble_gas = VGroup(
-            Circle(radius=0.5, color=YELLOW),
-            *[Dot(color=RED).move_to([0.5 * np.cos(theta), 0.5 * np.sin(theta), 0]) for theta in np.linspace(0, 2 * PI, 8, endpoint=False)]
-        ).to_edge(LEFT, buff=1)
-
-        other_element = VGroup(
-            Circle(radius=0.5, color=BLUE),
-            *[Dot(color=RED).move_to([0.5 * np.cos(theta), 0.5 * np.sin(theta), 0]) for theta in np.linspace(0, 2 * PI, 5, endpoint=False)]
-        ).to_edge(RIGHT, buff=1)
-
-        self.play(Create(noble_gas))
-        self.wait(1)
-        self.play(Transform(noble_gas, other_element))
-        self.wait(2)
-        self.play(FadeOut(noble_gas))
-
-        # Conclusion and Summary
-        summary = VGroup(
-            Text("Summary", font_size=40),
-            Text("1. Kössell–Lewis Approach", font_size=32),
-            Text("2. Ionic and Covalent Bonds", font_size=32),
-            Text("3. Octet Rule", font_size=32),
-            Text("4. Lewis Dot Structures", font_size=32)
-        ).arrange(DOWN, buff=0.5)
-
-        self.play(Write(summary[0]))
-        self.wait(1)
-        for point in summary[1:]:
-            self.play(FadeIn(point, shift=RIGHT))
-            self.wait(1)
-        self.wait(2)
-        self.play(FadeOut(summary))
+        render_video(self, BLUEPRINT)

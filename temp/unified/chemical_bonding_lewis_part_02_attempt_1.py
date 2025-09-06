@@ -108,14 +108,14 @@ class HistoricalContextOfChemicalBonding(Scene):
         # Predicting Molecular Structures
         co2_molecule = VGroup(
             Text("C", font_size=32),
-            Text("O", font_size=32).next_to(ORIGIN, LEFT),
-            Text("O", font_size=32).next_to(ORIGIN, RIGHT)
+            Text("O", font_size=32).next_to(co2_molecule[0], LEFT),
+            Text("O", font_size=32).next_to(co2_molecule[0], RIGHT)
         )
         nh3_molecule = VGroup(
             Text("N", font_size=32),
-            Text("H", font_size=32).next_to(ORIGIN, UP),
-            Text("H", font_size=32).next_to(ORIGIN, LEFT),
-            Text("H", font_size=32).next_to(ORIGIN, RIGHT)
+            Text("H", font_size=32).next_to(nh3_molecule[0], UP),
+            Text("H", font_size=32).next_to(nh3_molecule[0], LEFT),
+            Text("H", font_size=32).next_to(nh3_molecule[0], RIGHT)
         )
         self.play(FadeIn(co2_molecule, nh3_molecule))
         self.wait(1)

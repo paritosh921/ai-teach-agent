@@ -66,7 +66,7 @@ class BasicIntegrationTechniques(Scene):
     def understanding_derivatives_and_antiderivatives(self):
         axes = Axes(x_range=[-1, 3], y_range=[-1, 5], axis_config={"include_numbers": True})
         graph_x2 = axes.plot(lambda x: x**2, color=GREEN, x_range=[-1, 3])
-        tangent_line = axes.get_tangent_line(graph_x2, 1)
+        tangent_line = axes.get_tangent_line(graph_x2, x=1)
         tangent_line.set_color(YELLOW)
         dot = Dot(axes.c2p(1, 1**2), color=RED)
 
